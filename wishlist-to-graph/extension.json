@@ -1,0 +1,22 @@
+{
+  "kind": "command",
+  "name": "wishlist-to-graph",
+  "version": "0.2.0",
+  "protocol": "2025-06-18",
+  "flags": [
+    {"kind": "string", "name": "domain", "default": "amazon.com"},
+    {"kind": "string", "name": "html-file", "default": ""},
+    {"kind": "string", "name": "contact", "default": ""},
+    {"kind": "integer", "name": "delay-ms", "default": 1500},
+    {"kind": "integer", "name": "max-items", "default": 0},
+    {"kind": "boolean", "name": "skip-enrich", "default": false},
+    {"kind": "boolean", "name": "google-books", "default": false},
+    {"kind": "boolean", "name": "hardcover", "default": false},
+    {"kind": "boolean", "name": "wikidata", "default": false},
+    {"kind": "boolean", "name": "geocode", "default": false},
+    {"kind": "integer", "name": "geocode-limit", "default": 0}
+  ],
+  "positional": {"name": "WISHLIST"},
+  "commit": "per-batch",
+  "executable": "wishlist-to-graph.py"
+}

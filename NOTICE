@@ -1,0 +1,39 @@
+relate-book
+Copyright 2026 William Lyon
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This repository includes or produces third-party material:
+
+1. all-MiniLM-L6-v2 sentence-embedding model
+   ios/RelateBooks/Embedding/Model/ (MiniLM_L6_v2.mlmodelc, vocab.txt)
+   Converted to Core ML from sentence-transformers/all-MiniLM-L6-v2
+   (https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2),
+   licensed under the Apache License, Version 2.0. Conversion details and
+   the pinned revision are in ios/RelateBooks/Embedding/Model/MODEL.md.
+
+2. Sample graph store
+   ios/RelateBooks/Resources/books.rl is built by the wishlist-to-graph
+   extension from a public sample Amazon wishlist. It contains:
+   - wishlist item data (titles, formats, prices, ratings, product and image
+     URLs) as published on amazon.com. Amazon is a trademark of Amazon.com,
+     Inc. or its affiliates; this project is not affiliated with or endorsed
+     by Amazon.
+   - bibliographic data from Open Library (https://openlibrary.org). The
+     Internet Archive asserts no new copyright over the Open Library
+     database (https://openlibrary.org/developers/licensing).
+   - data from Wikidata (https://www.wikidata.org), available under CC0 1.0.
+   - geocoded coordinates and place details from Nominatim, derived from
+     OpenStreetMap data. © OpenStreetMap contributors, available under the
+     Open Database License (ODbL) 1.0: https://www.openstreetmap.org/copyright
+
+3. Screenshots
+   ios/docs/*.png show the app running on the sample store. Cover images in
+   them are served by the Open Library Covers API and belong to their
+   respective rights holders; map imagery is Apple Maps.
+
+4. Relate
+   The app links the Relate embedded graph database
+   (https://github.com/relatedb/relate) as a Swift package dependency. It is
+   not included in this repository and is licensed under the Apache License,
+   Version 2.0, Copyright 2026 The Relate Authors.

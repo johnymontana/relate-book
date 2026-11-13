@@ -1,0 +1,7 @@
+# SwiftPM output from `swift test` / `swift build`
+.build/
+.swiftpm/
+# Per-user Xcode state (RelateBooks.xcodeproj itself is committed; regenerate with `xcodegen generate`)
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/

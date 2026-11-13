@@ -1,0 +1,38 @@
+# Relate graph stores are build outputs of the extension (plus WAL and lock
+# files) and may hold a personal wishlist. The only tracked store is the public
+# sample the iOS app bundles; regenerate it with ios/scripts/refresh_store.sh.
+*.rl
+*.rl.wal
+*.rl.d/
+*.rl.lock
+*.rl.tmp
+!ios/RelateBooks/Resources/books.rl
+# Local store backups (personal exports, pre-geocode copies).
+backups/
+
+# Python (the extension is stdlib-only; run it with `python3 -I -B` when
+# importing it from scripts so no bytecode cache lands in wishlist-to-graph/).
+__pycache__/
+*.pyc
+.venv/
+
+# Swift / Xcode (see also ios/.gitignore). Package.resolved is tracked.
+.build/
+.swiftpm/
+DerivedData/
+xcuserdata/
+*.xcresult
+*.ipa
+*.dSYM/
+*.mlpackage/
+
+# Editors and local tool state
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+*.log
+.env
+.env.*
+.claude/settings.local.json

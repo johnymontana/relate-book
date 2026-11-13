@@ -1,0 +1,97 @@
+[
+  {
+    "metadataOutputVersion" : "3.0",
+    "shortDescription" : "all-MiniLM-L6-v2 sentence embedding: mean pooling over attention_mask + L2 normalization baked in. Inputs input_ids\/attention_mask int32 [1,256] (BERT uncased WordPiece, [CLS]..[SEP], pad 0); output embedding float32 [1,384], unit length.",
+    "outputSchema" : [
+      {
+        "hasShapeFlexibility" : "0",
+        "isOptional" : "0",
+        "dataType" : "Float32",
+        "formattedType" : "MultiArray (Float32 1 × 384)",
+        "shortDescription" : "L2-normalized 384-d sentence embedding",
+        "shape" : "[1, 384]",
+        "name" : "embedding",
+        "type" : "MultiArray"
+      }
+    ],
+    "storagePrecision" : "Float16",
+    "modelParameters" : [
+
+    ],
+    "author" : "sentence-transformers (Reimers & Gurevych); Core ML conversion by relate-book",
+    "specificationVersion" : 8,
+    "license" : "Apache-2.0",
+    "mlProgramOperationTypeHistogram" : {
+      "Ios17.mul" : 9,
+      "Ios17.sqrt" : 1,
+      "Ios17.linear" : 36,
+      "Select" : 1,
+      "Ios17.sub" : 1,
+      "Ios17.transpose" : 24,
+      "Ios17.matmul" : 12,
+      "Ios17.gather" : 1,
+      "Ios17.add" : 21,
+      "Ios17.clip" : 2,
+      "Ios17.realDiv" : 2,
+      "Ios16.softmax" : 6,
+      "Ios17.greaterEqual" : 1,
+      "Ios17.expandDims" : 3,
+      "Ios16.gelu" : 6,
+      "Ios16.reduceSum" : 3,
+      "Ios17.cast" : 5,
+      "Ios17.layerNorm" : 13,
+      "Ios17.reshape" : 24
+    },
+    "computePrecision" : "Mixed (Float16, Float32, Int16, Int32)",
+    "stateSchema" : [
+
+    ],
+    "isUpdatable" : "0",
+    "availability" : {
+      "macOS" : "14.0",
+      "tvOS" : "17.0",
+      "visionOS" : "1.0",
+      "watchOS" : "10.0",
+      "iOS" : "17.0",
+      "macCatalyst" : "17.0"
+    },
+    "modelType" : {
+      "name" : "MLModelType_mlProgram"
+    },
+    "inputSchema" : [
+      {
+        "hasShapeFlexibility" : "0",
+        "isOptional" : "0",
+        "dataType" : "Int32",
+        "formattedType" : "MultiArray (Int32 1 × 256)",
+        "shortDescription" : "WordPiece ids, [CLS]=101 ... [SEP]=102, padded with 0 to 256",
+        "shape" : "[1, 256]",
+        "name" : "input_ids",
+        "type" : "MultiArray"
+      },
+      {
+        "hasShapeFlexibility" : "0",
+        "isOptional" : "0",
+        "dataType" : "Int32",
+        "formattedType" : "MultiArray (Int32 1 × 256)",
+        "shortDescription" : "1 for real tokens (including [CLS]\/[SEP]), 0 for padding",
+        "shape" : "[1, 256]",
+        "name" : "attention_mask",
+        "type" : "MultiArray"
+      }
+    ],
+    "userDefinedMetadata" : {
+      "com.github.apple.coremltools.source" : "torch==2.7.0",
+      "com.github.apple.coremltools.source_dialect" : "TorchScript",
+      "com.github.apple.coremltools.version" : "9.0",
+      "com.github.apple.coremltools.conversion_date" : "2026-11-08",
+      "pooling" : "mean(attention_mask) + l2norm",
+      "max_sequence_length" : "256",
+      "embedding_model_id" : "all-MiniLM-L6-v2-coreml-fp16-256",
+      "source_revision" : "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "source_repo" : "sentence-transformers\/all-MiniLM-L6-v2"
+    },
+    "generatedClassName" : "MiniLM_L6_v2",
+    "method" : "predict"
+  }
+]

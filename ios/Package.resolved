@@ -1,0 +1,15 @@
+{
+  "originHash" : "e01e70a56207300c7939fe4549a0025b428759d027077b306353acda34157c81",
+  "pins" : [
+    {
+      "identity" : "relate",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/relatedb/relate",
+      "state" : {
+        "revision" : "ef436ce10a54a43c8f84905bc45a8d053d99a0d8",
+        "version" : "1.0.1"
+      }
+    }
+  ],
+  "version" : 3
+}
