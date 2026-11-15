@@ -1,0 +1,43 @@
+{
+  "name": "relate-books-web",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Explore a book-wishlist graph in the browser: Relate (WASM), NVL, and an in-browser LLM for text-to-Cypher and agentic chat",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "export-store": "node scripts/export-store.mjs",
+    "refresh-sample": "node scripts/export-store.mjs ../ios/RelateBooks/Resources/books.rl --out public/data/sample.json"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.2",
+    "@mlc-ai/web-llm": "^0.2.88",
+    "@neo4j-nvl/base": "^2.1.0",
+    "@neo4j-nvl/interaction-handlers": "^2.1.0",
+    "@neo4j-nvl/react": "^2.1.0",
+    "@relate/relate-wasm": "1.0.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "@webgpu/types": "^0.1.74",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

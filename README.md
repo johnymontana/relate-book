@@ -1,9 +1,10 @@
 # relate-book
 
-An Amazon wishlist as a reading-list graph, and an iPhone app to live in it.
-Built on [Relate](https://relatedb.ai), the embedded Cypher graph database.
+An Amazon wishlist as a reading-list graph, an iPhone app to live in it, and a
+browser app to explore it. Built on [Relate](https://relatedb.ai), the embedded
+Cypher graph database.
 
-Two parts:
+Three parts:
 
 1. **`wishlist-to-graph/`**, a Relate **extension** (`relate run wishlist-to-graph`).
    It fetches a public Amazon wishlist, writes every item into a graph the host
@@ -20,6 +21,12 @@ Two parts:
    explore the books on a map, and add new books from Open Library, an ISBN
    barcode or by hand. Everything except the add-book lookups and cover
    images works offline.
+3. **`web/`**, **Relate Books for the browser**: the same graph loaded into
+   Relate compiled to WebAssembly, with nothing running on a server. Charts,
+   a graph explorer drawn with NVL, hybrid semantic search, a Cypher console,
+   and two models that run in the tab (MiniLM embeddings and a WebGPU
+   language model) for asking questions in English (text to Cypher) and for
+   an agent that answers by querying the graph.
 
 <p>
   <img src="ios/docs/phase5-library.png" width="19%" alt="Library">
@@ -59,6 +66,27 @@ Xcode. Requirements, launch arguments, the embedding pipeline, map data, the
 add-book importer, binary sizes and the store lifecycle:
 [`ios/README.md`](ios/README.md).
 
+## Quick start: the web app
+
+```bash
+cd web
+npm install
+npm run dev                                # http://localhost:5173, the six-book sample
+npm run export-store -- ../books.rl        # your own list -> web/local/books.json (git-ignored);
+                                           # the dev server then opens it instead of the sample
+npm test && npm run e2e                    # 95 unit tests on the WASM engine, 12 browser tests
+```
+
+<p>
+  <img src="web/docs/overview.png" width="32%" alt="Overview charts">
+  <img src="web/docs/graph.png" width="32%" alt="Graph explorer">
+  <img src="web/docs/ask.png" width="32%" alt="A question turned into Cypher">
+</p>
+
+How the engine worker, the dataset export, search, text to Cypher and the
+agent work, what was measured, and the licences of what it downloads:
+[`web/README.md`](web/README.md).
+
 ### The bundled sample, and using your own list
 
 The app ships with `ios/RelateBooks/Resources/books.rl`, built from a public
@@ -90,6 +118,8 @@ and UI tests are written against the sample's six books.
 - **Python 3.10+** for the extension (standard library only).
 - **Xcode 27**, **xcodegen** and an iOS 26 simulator for the app. `uv` only if
   you regenerate the Core ML model.
+- **Node 22+** for the web app; Chrome for its end-to-end tests. A browser
+  with WebGPU for the language model (the rest works without).
 
 ## Layout
 
@@ -105,6 +135,11 @@ ios/
   Tests/, UITests/        core tests (macOS) and XCUITests (simulator)
   docs/                   simulator screenshots, phase by phase
   scripts/                refresh_store.sh, convert_embedding_model.py
+web/
+  src/                    engine worker, Cypher, search, text2cypher, agent, React UI
+  scripts/export-store.mjs  a .rl store -> the JSON dataset the browser loads
+  public/data/sample.json the public sample as a dataset
+  tests/, e2e/            Vitest (real WASM engine in Node) and Playwright
 docs/
   ios-app-plan.md         the plan, every decision, and a changelog per phase
   research.md             how Relate extensions, Amazon wishlist pages and the metadata sources behave
@@ -123,6 +158,9 @@ AGENTS.md                 conventions for coding agents (CLAUDE.md imports it)
   file-size limit, but it is binary and changes rarely. If it ever needs to be
   replaced more than once or twice, move it to Git LFS. It is reproducible
   byte for byte with `ios/scripts/convert_embedding_model.py`.
+- `web/public/data/sample.json` (the sample as the browser loads it, 48 KB)
+  is tracked; `web/local/` (your own export) is ignored, and so are
+  `web/node_modules/` and `web/dist/`.
 - Nothing here contains credentials. The extension reads an optional
   `GOOGLE_BOOKS_API_KEY` and `HARDCOVER_API_TOKEN` from the environment at run time.
 
@@ -139,6 +177,10 @@ AGENTS.md                 conventions for coding agents (CLAUDE.md imports it)
   iPhone 17 simulator: scaffold, browse, reading status/tags/notes, semantic
   search, map, add books. 266 core tests, 12 UI tests. Phase 6 (offline covers,
   importing a newer export, export, share) is next.
+- **Web app** implemented and verified in Chrome on the sample and on a
+  1,811-book list (17,431 nodes load in 2.3 s; every book embedded in about
+  3 s on WebGPU). 95 unit tests, 12 end-to-end tests. Measurements and the
+  language-model evaluation are in [`web/README.md`](web/README.md).
 
 ## Privacy and rate limits
 
@@ -146,7 +188,10 @@ The extension and the app identify themselves to Open Library and Nominatim
 with a User-Agent that names this repository. A contact address is sent only
 when you pass `--contact`. Both respect the services' one-request-per-second
 guidance; the extension caches geocoding results in
-`~/.cache/relate-book/geocode.json` so re-runs make no requests.
+`~/.cache/relate-book/geocode.json` so re-runs make no requests. The web app
+has no backend: the graph, searches and questions stay in the browser tab. It
+downloads model files from Hugging Face when you turn a model on, and loads
+cover images from Open Library and Amazon.
 
 ## Amazon
 
@@ -168,5 +213,7 @@ and the README closest to the code.
 ## License
 
 [Apache License 2.0](LICENSE). Third-party material (the MiniLM model, the
-data in the sample store, map and cover imagery in the screenshots) is listed
-in [`NOTICE`](NOTICE).
+data in the sample store, map and cover imagery in the screenshots, and the
+web app's dependencies and run-time models) is listed in [`NOTICE`](NOTICE).
+Note for the web app: the graph library it uses, NVL, is not open source and
+its licence limits what it may be used with; see `NOTICE` before hosting it.

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+# Personal exports (npm run export-store) record the list id and URL.
+local/
+# Playwright
+test-results/
+playwright-report/
+.vite/
+*.tsbuildinfo
+dist-e2e/

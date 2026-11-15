@@ -1,11 +1,12 @@
 # Working in this repository
 
-Guidance for coding agents (and humans) on relate-book. Two deliverables live
+Guidance for coding agents (and humans) on relate-book. Three deliverables live
 here: a Relate extension that imports an Amazon wishlist into a graph
-(`wishlist-to-graph/`) and a SwiftUI iPhone app over that graph (`ios/`).
+(`wishlist-to-graph/`), a SwiftUI iPhone app over that graph (`ios/`), and a
+browser app over the same graph that runs Relate as WebAssembly (`web/`).
 Read the README closest to what you touch before changing it:
 [`README.md`](README.md), [`wishlist-to-graph/README.md`](wishlist-to-graph/README.md),
-[`ios/README.md`](ios/README.md). The product plan, every design decision and
+[`ios/README.md`](ios/README.md), [`web/README.md`](web/README.md). The product plan, every design decision and
 the per-phase changelog are in [`docs/ios-app-plan.md`](docs/ios-app-plan.md);
 the research that shaped the extension is in [`docs/research.md`](docs/research.md).
 
@@ -20,6 +21,13 @@ ios/                    Xcode project (xcodegen) + SwiftPM package RelateBooksCo
   UITests/              XCUITest suite (simulator)
   docs/                 simulator screenshots per phase
   scripts/              refresh_store.sh, convert_embedding_model.py (+ pinned requirements)
+web/                    Vite + React + TypeScript app: Relate WASM, NVL, WebLLM, transformers.js
+  src/engine/           the engine worker, the dataset loader, the graph model (no React)
+  src/queries/          Cypher per tab (no React); src/search/ and src/ai/ are logic, tested in Node
+  src/features/, components/, state/   UI only
+  scripts/export-store.mjs   .rl -> dataset JSON through the relate CLI
+  public/data/sample.json    the public sample as a dataset (tracked); local/ is your export (git-ignored)
+  tests/, e2e/          Vitest (Node, real WASM engine) and Playwright (installed Chrome)
 docs/                   ios-app-plan.md (plan + changelog), research.md
 books.rl                your own export (git-ignored); ios/RelateBooks/Resources/books.rl is the tracked public sample
 LICENSE, NOTICE         Apache-2.0; third-party material (model, sample data, screenshots)
@@ -41,6 +49,11 @@ LICENSE, NOTICE         Apache-2.0; third-party material (model, sample data, sc
 - Full Xcode 27 (Swift Testing macros), `xcodegen` (`brew install xcodegen`),
   an iOS 26 simulator named "iPhone 17". `uv` only for regenerating the Core ML
   model.
+- For `web/`: Node 22+, and Google Chrome for the end-to-end tests (Playwright
+  drives the installed browser; nothing is downloaded). The app pins
+  `@relate/relate-wasm` at exactly 1.0.1; change it only as a deliberate
+  upgrade and re-run both suites. The in-browser models are fetched by the
+  browser at run time and are never part of the repository or a build.
 
 ## Commands
 
@@ -64,6 +77,17 @@ xcodebuild test -project RelateBooks.xcodeproj -scheme RelateBooks \
   -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:RelateBooksUITests   # ~7 min, 12 tests
 ```
 
+```sh
+# Web
+cd web
+npm install
+npm test                     # unit tests in Node on the real WASM engine; expect "Tests  95 passed (95)"
+npm run e2e                  # Playwright, installed Chrome, stubbed models; 12 tests (2 against a production build), about 30 s
+npm run typecheck && npm run build
+npm run export-store -- ../books.rl      # your list -> web/local/books.json (git-ignored)
+npm run refresh-sample       # after the bundled sample store changes
+```
+
 UI tests need a fresh install (`xcrun simctl uninstall <udid> com.johnymontana.RelateBooks`)
 because the app keeps its own copy of the store, and they include the
 first-launch embedding pass (about a minute with the six-book sample, mostly
@@ -85,6 +109,12 @@ Mary, San Francisco, Gethen, Hainish Cycle…), so replacing the sample means
 updating them. **Never commit a personal export**: a store records the list id
 and URL. Root `books.rl` and `backups/` are git-ignored for that reason.
 
+`web/public/data/sample.json` is an export of that sample
+(`npm run refresh-sample` in `web/`); the web tests name the same books, so
+refresh it and both web suites together with the store. A personal export for
+the web app goes to `web/local/` (git-ignored, served only by the dev server)
+and nowhere else: never under `web/public/`, which is copied into every build.
+
 **Relate engine rule (LABS-1188, still present in 1.0.1).** Never create and
 then delete the same node inside one explicit transaction: the engine panics
 and poisons the connection. Deleting nodes that existed before the transaction
@@ -102,6 +132,20 @@ folders go under `Features/`; anything else under `RelateBooks/` is compiled
 by `swift test` on macOS too and must build there. A new top-level UI-only
 folder must be added to `exclude` in `Package.swift`.
 
+**Web app layering.** The same split as iOS, in TypeScript: `features/`,
+`components/` and `state/` contain no Cypher; `queries/` contains no React;
+`engine/`, `queries/`, `search/` and `ai/` (except the two `*.worker.ts`
+runtimes and their clients) run in Node and are tested there. Only the engine
+worker touches the WASM handle. Parameters cross into WASM as JSON, so typed
+values are built in the statement (`vector($q, 384, FLOAT32)`, `point($p)`,
+`datetime($t)`), never passed as objects.
+
+**Generated Cypher is read-only.** Anything a language model writes goes
+through `ai/text2cypher/pipeline.ts`: the lexical guard and the EXPLAIN plan
+check both have to pass before it runs (Relate WASM has no per-statement
+read-only mode). Do not add a path that runs model output any other way. The
+Query tab's own editor is the user's and may write.
+
 **Timestamps.** Swift passes ISO-8601 strings and statements use
 `datetime($now)` / `date($today)`. Never call argument-less `date()` or
 `datetime()` in app Cypher (the engine clock is UTC).
@@ -111,9 +155,13 @@ one statement or one `transaction`. Multi-entity imports run in one
 transaction of `MERGE` statements with no `DELETE`. Defaults are never
 bulk-written (a missing `reading_status` means "want").
 
-**Network and privacy.** The app talks only to `openlibrary.org`,
+**Network and privacy.** The iOS app talks only to `openlibrary.org`,
 `covers.openlibrary.org` and Apple's geocoder; the extension to Amazon, Open
-Library, Nominatim and the optional sources. User-Agents identify the project
+Library, Nominatim and the optional sources. The web app has no backend: it
+fetches model files from Hugging Face and WebLLM's model libraries from
+`raw.githubusercontent.com` when the user turns a model on, and hot-links
+cover images; the graph, searches and questions never leave the tab, and NVL's
+telemetry stays off (`disableTelemetry: true`). User-Agents identify the project
 by URL (`+https://github.com/johnymontana/relate-book`) and carry a contact
 only when one is passed explicitly (`--contact`). Never put a personal e-mail
 address in code, headers, tests or docs. Respect the published rate limits
@@ -124,21 +172,33 @@ verified on a store copy with the CLI before it lands in a query file; the
 perf suite (`PerfTests.swift`) has a 50 ms budget per query (30 ms for place
 queries) and must stay green. UI tests must not depend on the live network or
 the camera: use the DEBUG launch flags `--stub-network` and `--simulate-scan`.
+In `web/`: logic gets a Vitest case against the real WASM engine
+(`tests/helpers/engine.ts`); every few-shot example in
+`ai/text2cypher/examples.ts` must validate and run (the suite checks all of
+them); end-to-end tests use `?dataset=sample&stub-ai` and must not need the
+network, a GPU or a model. A change to how assets, workers or datasets are
+located needs the `build` Playwright project to stay green: the dev server
+hides URL mistakes that a build exposes.
 
 **Docs travel with changes.** Each phase or notable change appends to the
 Changelog in `docs/ios-app-plan.md` (decisions, deviations, measurements) and
-updates the relevant README section. Keep numbers in the docs equal to what
+updates the relevant README section. The web app keeps its decisions and
+measurements in `web/README.md`. Keep numbers in the docs equal to what
 was measured.
 
 **Housekeeping.** Scratch files, derived data and store copies belong outside
 the repository or in git-ignored paths. Never run `git init`, commit or push
 unless asked. Do not create `__pycache__` inside `wishlist-to-graph/` (use
-`python3 -B`).
+`python3 -B`). In `web/`, `node_modules/`, `dist/`, `local/`, `test-results/`
+and `playwright-report/` are ignored; commit `package-lock.json`.
 
 ## Status
 
-Phases 0 to 5 of the plan are implemented (browse, reading status/tags/notes,
+Phases 0 to 5 of the iOS plan are implemented (browse, reading status/tags/notes,
 on-device semantic search, map, adding books). Phase 6 (offline covers,
-importing a newer `.rl`, export, share) is pending. The Google Books and
+importing a newer `.rl`, export, share) is pending. The web app (overview
+charts, library with hybrid search, NVL graph explorer, Cypher console,
+text-to-Cypher and the chat agent) is implemented; it is read-mostly and has
+none of the iOS app's user data (status, tags, notes). The Google Books and
 Hardcover passes in the extension have never been run end to end (no
 credentials).
