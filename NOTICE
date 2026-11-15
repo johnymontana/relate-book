@@ -14,7 +14,9 @@ This repository includes or produces third-party material:
 
 2. Sample graph store
    ios/RelateBooks/Resources/books.rl is built by the wishlist-to-graph
-   extension from a public sample Amazon wishlist. It contains:
+   extension from a public sample Amazon wishlist.
+   web/public/data/sample.json is an export of the same store
+   (web/scripts/export-store.mjs) and carries the same data. It contains:
    - wishlist item data (titles, formats, prices, ratings, product and image
      URLs) as published on amazon.com. Amazon is a trademark of Amazon.com,
      Inc. or its affiliates; this project is not affiliated with or endorsed
@@ -28,12 +30,40 @@ This repository includes or produces third-party material:
      Open Database License (ODbL) 1.0: https://www.openstreetmap.org/copyright
 
 3. Screenshots
-   ios/docs/*.png show the app running on the sample store. Cover images in
-   them are served by the Open Library Covers API and belong to their
-   respective rights holders; map imagery is Apple Maps.
+   ios/docs/*.png and web/docs/*.png show the apps running on the sample
+   store. Cover images in them are served by the Open Library Covers API and
+   belong to their respective rights holders; map imagery (iOS) is Apple Maps.
 
 4. Relate
-   The app links the Relate embedded graph database
-   (https://github.com/relatedb/relate) as a Swift package dependency. It is
-   not included in this repository and is licensed under the Apache License,
-   Version 2.0, Copyright 2026 The Relate Authors.
+   The iOS app links the Relate embedded graph database
+   (https://github.com/relatedb/relate) as a Swift package dependency, and
+   the web app depends on its WebAssembly build (@relate/relate-wasm on npm).
+   Neither is included in this repository. Relate is licensed under the
+   Apache License, Version 2.0, Copyright 2026 The Relate Authors.
+
+5. Web app dependencies (web/, installed from npm, not included here)
+   - Neo4j Visualization Library (@neo4j-nvl/base, @neo4j-nvl/react,
+     @neo4j-nvl/interaction-handlers), Copyright Neo4j, Inc. NVL is NOT
+     open source: its licence (node_modules/@neo4j-nvl/base/LICENSE.txt)
+     permits use only with Neo4j Aura or Neo4j's commercial graph database
+     products. The web app uses it to draw a Relate graph. Anyone hosting
+     or redistributing the web app must check that their use is covered by
+     that licence, or replace web/src/components/GraphCanvas.tsx, the only
+     file that imports NVL.
+   - WebLLM (@mlc-ai/web-llm), Apache License 2.0.
+   - Transformers.js (@huggingface/transformers) and ONNX Runtime Web,
+     Apache License 2.0 and MIT.
+   - React, MIT.
+
+6. Models the web app downloads at run time (not included here)
+   The user's browser fetches these from Hugging Face when the user asks
+   for them; each is under its publisher's licence:
+   - Xenova/all-MiniLM-L6-v2 (ONNX export of
+     sentence-transformers/all-MiniLM-L6-v2), Apache License 2.0.
+   - Qwen2.5-Coder-3B-Instruct, the default language model, is under the
+     Qwen Research Licence, which is a research licence and not a general
+     commercial one. The 1.5B and 7B Qwen2.5 Coder models and Qwen3 4B are
+     Apache License 2.0; Llama 3.2 3B is under the Llama 3.2 Community
+     License; Phi-4 mini is MIT. These are the licences on each model's
+     Hugging Face card on 2026-11-14; MLC's compiled builds
+     (huggingface.co/mlc-ai) follow the original models.
