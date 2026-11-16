@@ -7,8 +7,8 @@ import Relate
 /// (`source`, `added_on`, `match`) and the edition facts an ISBN import
 /// writes on the Book itself (an app-added book has no Item).
 enum BookQueries {
-    static func detail(key: String) -> Statement {
-        Statement("""
+    static func detail(key: String) throws -> Statement {
+        try Statement("""
             MATCH (b:Book {key: $key})
             RETURN b.key AS key, b.title AS title, b.url AS url, b.cover_url AS coverURL,
                    b.description AS description, b.first_publish_year AS firstPublishYear,
@@ -40,13 +40,13 @@ enum BookQueries {
                         isbn13: i.isbn13, isbn10: i.isbn10,
                         position: c.position, priority: c.priority_label}] AS items,
             \(StatusQueries.userColumns)
-            """, ["key": .string(key)])
+            """, ["key": key])
     }
 }
 
 extension GraphStore {
     /// The book with `key`, or nil when there is none.
-    func bookDetail(key: String) throws -> BookDetail? {
-        try run(BookQueries.detail(key: key), label: "bookDetail").rowsView.first.map(BookDetail.init(row:))
+    func bookDetail(key: String) async throws -> BookDetail? {
+        try await read(BookQueries.detail(key: key)).rowsView.first.map(BookDetail.init(row:))
     }
 }

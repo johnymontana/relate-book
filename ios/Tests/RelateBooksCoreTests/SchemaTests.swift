@@ -6,7 +6,7 @@ import Relate
 struct SchemaTests {
     @Test("migrate is idempotent")
     func migrateTwice() async throws {
-        let store = try GraphStore(database: Database.inMemory())
+        let store = GraphStore(database: try Database.inMemory())
         #expect(try await store.migrate() == Schema.currentVersion)
         #expect(try await store.migrate() == Schema.currentVersion)
         let metas = try await store.query("MATCH (m:AppMeta {key: 'schema_version'}) RETURN count(m) AS c").scalar()
@@ -50,14 +50,37 @@ struct SchemaTests {
     @Test("schema_version is 2; a version-1 store migrates to 2, idempotently")
     func versionTwo() async throws {
         #expect(Schema.currentVersion == 2)
-        let store = try GraphStore(database: Database.inMemory())
+        let store = GraphStore(database: try Database.inMemory())
         #expect(try await store.migrate() == 2)
-        try await store.query("MATCH (m:AppMeta {key: 'schema_version'}) SET m.value = 1")
+        try await store.query("MATCH (m:AppMeta {key: 'schema_version'}) SET m.version = 1")
         #expect(try await store.query(Schema.readVersion).scalar().intValue == 1)
         #expect(try await store.migrate() == 2)
         #expect(try await store.query(Schema.readVersion).scalar().intValue == 2)
         #expect(try await store.migrate() == 2)
         let vectorCount = try await store.query("SHOW INDEXES YIELD name, type WHERE type = 'VECTOR' RETURN count(*) AS c").scalar()
         #expect(vectorCount.intValue == 2)
+    }
+
+    @Test("a store from before the migrator (version kept in AppMeta.value) is adopted, at either version")
+    func legacyVersionRecord() async throws {
+        for legacy in [1, 2] {
+            let store = GraphStore(database: try Database.inMemory())
+            try await store.query("CREATE (:AppMeta {key: 'schema_version', value: $v})", ["v": .int(Int64(legacy))])
+            #expect(try await store.migrate() == 2)
+            let record = try #require(try await store.query(
+                "MATCH (m:AppMeta {key: 'schema_version'}) RETURN m.version AS version, m.value AS value").rowsView.first)
+            #expect(record.int("version") == 2 && record["value"].isNull)
+            #expect(try await store.migrate() == 2)
+            #expect(try await store.countOf("MATCH (m:AppMeta) RETURN count(m)") == 1)
+        }
+    }
+
+    @Test("a store written by a newer build is refused before anything runs")
+    func newerStoreRefused() async throws {
+        let store = GraphStore(database: try Database.inMemory())
+        try await store.query("CREATE (:AppMeta {key: 'schema_version', version: 99})")
+        await #expect(throws: RelateError.self) { try await store.migrate() }
+        let names = try await store.query("SHOW INDEXES YIELD name RETURN name").rowsView.compactMap { $0.string("name") }
+        #expect(!names.contains("tag_name") && !names.contains("book_embedding"))
     }
 }

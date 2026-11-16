@@ -131,8 +131,10 @@ struct PlaceQueryTests {
         // Documents the engine: point.withinBBox wraps west > east since
         // relate 1.0.1 (0.16.1 matched nothing), so the split is now
         // belt-and-braces rather than required.
-        let raw = Statement(PlaceQueries.region(.world).cypher,
-                            ["south": .float(-30), "west": .float(170), "north": .float(0), "east": .float(-160)])
+        let raw = Statement(try PlaceQueries.region(.world).cypher, [
+            "southWest": .point(try .init(latitude: -30, longitude: 170)),
+            "northEast": .point(try .init(latitude: 0, longitude: -160)),
+        ])
         let labels = try await store.run(raw).rowsView.compactMap { try? PlacePin(row: $0).label }
         #expect(Set(labels) == ["Suva", "Apia"])
     }
@@ -243,13 +245,13 @@ struct PlaceQueryTests {
     }
 
     @Test("the statements use parameters and the label index's property")
-    func statements() {
-        let region = PlaceQueries.region(PlaceFixture.usBox)
-        #expect(region.parameters["west"] == .float(-125) && region.parameters["north"] == .float(50))
+    func statements() throws {
+        let region = try PlaceQueries.region(PlaceFixture.usBox)
+        #expect(region.parameters["southWest"]?.pointValue?.longitude == -125 && region.parameters["northEast"]?.pointValue?.latitude == 50)
         #expect(region.cypher.contains("point.withinBBox(p.location"))
-        #expect(PlaceQueries.search("mont").parameters["limit"] == .int(20))
-        #expect(PlaceQueries.books(label: "Montana", skip: -3).parameters["skip"] == .int(0))
-        #expect(PlaceQueries.summary(label: "x").cypher.contains("{geocoded_label: $label}"))
+        #expect(try PlaceQueries.search("mont").parameters["limit"] == .int(20))
+        #expect(try PlaceQueries.books(label: "Montana", skip: -3).parameters["skip"] == .int(0))
+        #expect(try PlaceQueries.summary(label: "x").cypher.contains("{geocoded_label: $label}"))
     }
 }
 

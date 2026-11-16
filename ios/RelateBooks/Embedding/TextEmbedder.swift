@@ -58,13 +58,6 @@ enum EmbeddingVector {
         guard v.allSatisfy(\.isFinite) else { throw EmbeddingError.nonFiniteOutput }
     }
 
-    /// A typed FLOAT32 vector parameter. Every Float widens to a Double that
-    /// is exactly representable as FLOAT32, which the engine requires (V3);
-    /// it is stored as `VECTOR<FLOAT32 NOT NULL>(n)`.
-    static func cypherValue(_ v: [Float]) -> CypherValue {
-        .vector(.floats(dtype: .float32, values: v.map(Double.init)))
-    }
-
     /// Cosine similarity; 0 when either vector is zero or the lengths differ.
     static func cosine(_ a: [Float], _ b: [Float]) -> Double {
         guard a.count == b.count, !a.isEmpty else { return 0 }
@@ -80,19 +73,13 @@ enum EmbeddingVector {
     }
 
     /// The vector a stored property holds (`.vector` or a numeric list).
+    /// A FLOAT32 vector reads back bit-identical.
     static func floats(from value: CypherValue) -> [Float]? {
-        switch value {
-        case .vector(.floats(_, let values)): return values.map { Float($0) }
-        case .vector(.ints(_, let values)): return values.map { Float($0) }
-        case .list(let items):
-            var out: [Float] = []
-            out.reserveCapacity(items.count)
-            for item in items {
-                guard let d = item.doubleValue else { return nil }
-                out.append(Float(d))
-            }
-            return out
-        default: return nil
+        if let vector = value.vectorValue {
+            if let floats = vector.float32Values { return floats }
+            if case .ints(_, let values) = vector { return values.map { Float($0) } }
+            return nil
         }
+        return try? [Float](cypherValue: value)
     }
 }

@@ -91,12 +91,12 @@ struct LibraryQueriesTests {
     }
 
     @Test("only active filters reach the WHERE clause; values are parameters")
-    func statementShape() {
-        let none = LibraryQueries.page(filter: LibraryFilter(), sort: .title, skip: 0)
+    func statementShape() throws {
+        let none = try LibraryQueries.page(filter: LibraryFilter(), sort: .title, skip: 0)
         #expect(!none.cypher.contains("WHERE"))
         #expect(Set(none.parameters.keys) == ["skip", "limit"])
         let evil = "x' OR 1=1 //"
-        let some = LibraryQueries.page(filter: LibraryFilter(format: evil, text: evil), sort: .rating, skip: 80)
+        let some = try LibraryQueries.page(filter: LibraryFilter(format: evil, text: evil), sort: .rating, skip: 80)
         #expect(!some.cypher.contains(evil))
         #expect(some.parameters["format"] == .string(evil))
         #expect(some.parameters["text"] == .string(evil.lowercased()))

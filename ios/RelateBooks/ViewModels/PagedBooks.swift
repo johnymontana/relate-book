@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Infinite-scroll paging over any book list query. Main-actor state; the
-/// fetch closure awaits the `GraphStore` actor. A `generation` counter drops
+/// fetch closure awaits the `GraphStore`. A `generation` counter drops
 /// results of a page request that a reset overtook (e.g. typing fast).
 @MainActor
 @Observable

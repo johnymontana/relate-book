@@ -70,7 +70,7 @@ struct ImportSaveTests {
         #expect(try await store.saveImport(draft, now: Self.now.addingTimeInterval(60)) == .existing(key: PerfectStorm.key))
         #expect(try await Self.counts(store) == before)
         // The statements themselves are guarded too (a race past the pre-check).
-        let results = try await store.transaction(ImportQueries.saveStatements(draft, now: Self.now.addingTimeInterval(120)))
+        let results = try await store.write(try ImportQueries.saveStatements(draft, now: Self.now.addingTimeInterval(120)))
         #expect(results[0].rowsView.first?.bool("created") == false)
         #expect(try await Self.counts(store) == before)
     }

@@ -1,7 +1,7 @@
 import Relate
 
 /// Cypher for the library list. Strings live here; execution is the
-/// `GraphStore` extension below, so only the actor touches the Connection.
+/// `GraphStore` extension below, which runs each statement as a read or a write.
 ///
 /// Page shape: filter `Book`s, compute one sort key per book, sort, apply
 /// SKIP/LIMIT, and only then join authors and items for the 40 survivors
@@ -114,7 +114,9 @@ enum LibraryQueries {
     /// Search text runs first as a UNION of three label scans (book titles,
     /// author names, item titles), which measured about 3x faster on the real
     /// store than per-book `EXISTS` subqueries; the other filters then apply
-    /// to that candidate set.
+    /// to that candidate set. That form is a `CALL { }` subquery, which the
+    /// engine reports as read-write, so the list runs it through
+    /// `GraphStore.readWithSubquery` (see there).
     ///
     /// A tag filter without search text starts at the tag
     /// (`MATCH (:Tag {name: $tag})<-[:TAGGED]-(b:Book)`), about 5x faster
@@ -122,16 +124,16 @@ enum LibraryQueries {
     /// 200-book tag). It cannot duplicate a book: Tag.name is unique and
     /// TAGGED is written with MERGE, so there is one per (book, tag). With
     /// search text the tag is an `EXISTS` condition on the search results.
-    static func match(_ filter: LibraryFilter) -> (cypher: String, parameters: [String: CypherValue]) {
+    static func match(_ filter: LibraryFilter) throws -> Statement {
         var conditions: [String] = []
-        var parameters: [String: CypherValue] = [:]
+        var parameters: [String: any CypherValueConvertible] = [:]
         var base = "MATCH (b:Book)"
         if let status = filter.status {
             conditions.append(statusCondition(status))
-            parameters["status"] = .string(status.rawValue)
+            parameters["status"] = status.rawValue
         }
         if let tag = filter.tag {
-            parameters["tag"] = .string(tag)
+            parameters["tag"] = tag
             if filter.normalizedText == nil {
                 base = "MATCH (:Tag {name: $tag})<-[:TAGGED]-(b:Book)"
             } else {
@@ -144,17 +146,17 @@ enum LibraryQueries {
         if let format = filter.format {
             // App-added books have no Item; their format is Book.physical_format (phase 5).
             conditions.append("(EXISTS { MATCH (fi:Item)-[:EDITION_OF]->(b) WHERE fi.format = $format } OR b.physical_format = $format)")
-            parameters["format"] = .string(format)
+            parameters["format"] = format
         }
         if let genre = filter.genre {
             conditions.append("EXISTS { MATCH (b)-[:IN_GENRE]->(fg:Genre) WHERE fg.name = $genre }")
-            parameters["genre"] = .string(genre)
+            parameters["genre"] = genre
         }
         let whereClause = conditions.isEmpty ? "" : "\nWHERE " + conditions.joined(separator: "\n  AND ")
         guard let text = filter.normalizedText else {
-            return (base + whereClause, parameters)
+            return try Statement(base + whereClause, parameters)
         }
-        parameters["text"] = .string(text)
+        parameters["text"] = text
         let search = """
             CALL {
               MATCH (b:Book) WHERE toLower(b.title) CONTAINS $text RETURN b
@@ -165,28 +167,31 @@ enum LibraryQueries {
             }
             WITH b
             """
-        return (search + whereClause, parameters)
+        return try Statement(search + whereClause, parameters)
     }
 
-    /// One page of the library list.
-    static func page(filter: LibraryFilter, sort: LibrarySort, skip: Int, limit: Int = pageSize) -> Statement {
-        let (match, parameters) = match(filter)
+    /// One page of the library list: the filter's statement with the sort,
+    /// the page window and the projection appended. `append` carries the
+    /// filter's parameters along.
+    static func page(filter: LibraryFilter, sort: LibrarySort, skip: Int, limit: Int = pageSize) throws -> Statement {
         let order = orderBy(sort)
-        let cypher = """
-            \(match)
+        var statement = try match(filter)
+        try statement.append(Statement("""
+
             \(sortKey(sort).clause)
             \(order)
             SKIP $skip LIMIT $limit
             \(summaryProjection(preferringFormat: filter.format != nil))
             \(order)
-            """
-        return Statement(cypher, parameters.merging(["skip": CypherValue(max(0, skip)), "limit": CypherValue(max(0, limit))]) { a, _ in a })
+            """, ["skip": max(0, skip), "limit": max(0, limit)]))
+        return statement
     }
 
     /// The number of books the filter matches.
-    static func count(filter: LibraryFilter) -> Statement {
-        let (match, parameters) = match(filter)
-        return Statement("\(match)\nRETURN count(b) AS count", parameters)
+    static func count(filter: LibraryFilter) throws -> Statement {
+        var statement = try match(filter)
+        try statement.append(Statement("\nRETURN count(b) AS count"))
+        return statement
     }
 
     /// Format chips: each book format with the number of books that have an item in it.
@@ -216,8 +221,8 @@ enum LibraryQueries {
 }
 
 extension GraphStore {
-    func bookCount() throws -> Int {
-        guard let n = try query(LibraryQueries.bookCount).scalar().intValue else {
+    func bookCount() async throws -> Int {
+        guard let n = try await read(Statement(LibraryQueries.bookCount)).scalar().intValue else {
             throw GraphError.missingColumn("count")
         }
         return Int(n)
@@ -225,20 +230,22 @@ extension GraphStore {
 
     /// One page (default 40) of the library, filtered and sorted.
     func libraryPage(filter: LibraryFilter = LibraryFilter(), sort: LibrarySort = .title,
-                     skip: Int = 0, limit: Int = LibraryQueries.pageSize) throws -> [BookSummary] {
-        try run(LibraryQueries.page(filter: filter, sort: sort, skip: skip, limit: limit), label: "libraryPage")
-            .rowsView.map(BookSummary.init(row:))
+                     skip: Int = 0, limit: Int = LibraryQueries.pageSize) async throws -> [BookSummary] {
+        let statement = try LibraryQueries.page(filter: filter, sort: sort, skip: skip, limit: limit)
+        return try await run(statement, searching: filter).rowsView.map(BookSummary.init(row:))
     }
 
-    func libraryCount(filter: LibraryFilter = LibraryFilter()) throws -> Int {
-        try countValue(run(LibraryQueries.count(filter: filter), label: "libraryCount"))
+    func libraryCount(filter: LibraryFilter = LibraryFilter()) async throws -> Int {
+        try countValue(await run(LibraryQueries.count(filter: filter), searching: filter))
     }
 
     /// Item formats plus app books' `physical_format`, summed per name,
     /// sorted by count (descending), then name.
-    func formatFacets() throws -> [FacetValue] {
-        let items = try facets(run(LibraryQueries.formatFacets, label: "formatFacets"))
-        let app = try facets(run(LibraryQueries.appFormatFacets, label: "appFormatFacets"))
+    func formatFacets() async throws -> [FacetValue] {
+        // Both counts from one snapshot.
+        let (items, app) = try await database.read { tx in
+            (try facets(tx.run(LibraryQueries.formatFacets)), try facets(tx.run(LibraryQueries.appFormatFacets)))
+        }
         guard !app.isEmpty else { return items }
         var counts: [String: Int] = [:]
         for facet in items + app { counts[facet.name, default: 0] += facet.count }
@@ -246,8 +253,13 @@ extension GraphStore {
             .sorted { $0.count != $1.count ? $0.count > $1.count : $0.name < $1.name }
     }
 
-    func genreFacets() throws -> [FacetValue] {
-        try facets(run(LibraryQueries.genreFacets, label: "genreFacets"))
+    func genreFacets() async throws -> [FacetValue] {
+        try facets(await read(LibraryQueries.genreFacets))
+    }
+
+    /// A filter with search text is a `CALL { }` subquery (`LibraryQueries.match`).
+    private func run(_ statement: Statement, searching filter: LibraryFilter) async throws -> QueryResult {
+        filter.normalizedText == nil ? try await read(statement) : try await readWithSubquery(statement)
     }
 
     private func facets(_ result: QueryResult) throws -> [FacetValue] {

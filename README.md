@@ -55,14 +55,16 @@ queries and caveats: [`wishlist-to-graph/README.md`](wishlist-to-graph/README.md
 
 ```bash
 cd ios
+scripts/setup_relate.sh                   # once: Relate at the pinned commit, engine built locally (needs rustup)
+export RELATE_LOCAL_XCFRAMEWORK=1         # for every swift and xcodebuild command
 xcodegen generate
-swift test                                # 266 core tests on the Mac
+swift test                                # 270 core tests on the Mac
 xcodebuild -project RelateBooks.xcodeproj -scheme RelateBooks \
   -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/rb-dd build
 ```
 
-Then install and launch on the simulator, or open `RelateBooks.xcodeproj` in
-Xcode. Requirements, launch arguments, the embedding pipeline, map data, the
+Then install and launch on the simulator, or open the project in Xcode
+(`open -a Xcode --env RELATE_LOCAL_XCFRAMEWORK=1 RelateBooks.xcodeproj`). Requirements, launch arguments, the embedding pipeline, map data, the
 add-book importer, binary sizes and the store lifecycle:
 [`ios/README.md`](ios/README.md).
 
@@ -109,9 +111,12 @@ and UI tests are written against the sample's six books.
 
 ## Requirements
 
-- **Relate 1.0.1.** The iOS package and project depend on the published Swift
-  package (`https://github.com/relatedb/relate`, exact version 1.0.1); SwiftPM
-  downloads its checksum-pinned `RelateFFI.xcframework` (about 300 MB, once).
+- **Relate.** The extension, the bundled store and the web app use Relate
+  1.0.1. The iOS app uses the Swift API that Relate's `main` branch gained
+  after 1.0.1, which no release carries yet: `ios/scripts/setup_relate.sh`
+  fetches the pinned commit into `ios/Vendor/relate` (git-ignored) and builds
+  the engine there, which needs `rustup`. Details and the way back to a
+  release are in [`ios/README.md`](ios/README.md).
   The `relate` CLI (for the extension and ad-hoc Cypher) comes from the
   installer above, the [release page](https://github.com/relatedb/relate/releases),
   or `cargo build --release -p relate-cli` in a Relate checkout.
@@ -134,7 +139,7 @@ ios/
   RelateBooks/            app sources (Graph/, Embedding/, Search/, OpenLibrary/, Geo/, ViewModels/, Features/, App/)
   Tests/, UITests/        core tests (macOS) and XCUITests (simulator)
   docs/                   simulator screenshots, phase by phase
-  scripts/                refresh_store.sh, convert_embedding_model.py
+  scripts/                setup_relate.sh, refresh_store.sh, convert_embedding_model.py
 web/
   src/                    engine worker, Cypher, search, text2cypher, agent, React UI
   scripts/export-store.mjs  a .rl store -> the JSON dataset the browser loads
@@ -175,7 +180,8 @@ AGENTS.md                 conventions for coding agents (CLAUDE.md imports it)
   credentials).
 - **App** phases 0 to 5 of the plan are implemented and verified on the
   iPhone 17 simulator: scaffold, browse, reading status/tags/notes, semantic
-  search, map, add books. 266 core tests, 12 UI tests. Phase 6 (offline covers,
+  search, map, add books. 270 core tests, 12 UI tests. Since 2026-11-15 it is
+  built on Relate's unreleased Swift API (see Requirements). Phase 6 (offline covers,
   importing a newer export, export, share) is next.
 - **Web app** implemented and verified in Chrome on the sample and on a
   1,811-book list (17,431 nodes load in 2.3 s; every book embedded in about

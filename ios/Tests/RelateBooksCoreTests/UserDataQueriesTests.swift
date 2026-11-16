@@ -17,8 +17,15 @@ enum UserDataClock {
 
 extension GraphStore {
     /// First column of the first row as an Int (test helper).
-    func countOf(_ cypher: String, _ parameters: [String: CypherValue] = [:]) throws -> Int {
-        Int(try query(cypher, parameters).scalar().intValue ?? -1)
+    func countOf(_ cypher: String, _ parameters: [String: CypherValue] = [:]) async throws -> Int {
+        Int(try await query(cypher, parameters).scalar().intValue ?? -1)
+    }
+
+    /// Runs a statement whatever it does, on the writer (test helper). The
+    /// app's own methods choose `read` or `write`.
+    @discardableResult
+    func run(_ statement: Statement) async throws -> QueryResult {
+        try await database.write(statement)
     }
 }
 
@@ -253,13 +260,13 @@ struct UserDataQueriesTests {
             #expect(Set(try await store.libraryPage(filter: fav, sort: sort).map(\.key)) == ["/works/OL1W", "/works/OL2W"])
         }
 
-        let plain = LibraryQueries.page(filter: fav, sort: .title, skip: 0)
+        let plain = try LibraryQueries.page(filter: fav, sort: .title, skip: 0)
         #expect(plain.cypher.contains("MATCH (:Tag {name: $tag})<-[:TAGGED]-(b:Book)"))
         #expect(!plain.cypher.contains("EXISTS"))
-        let searched = LibraryQueries.page(filter: LibraryFilter(tag: "Favorites", text: "mango"), sort: .title, skip: 0)
+        let searched = try LibraryQueries.page(filter: LibraryFilter(tag: "Favorites", text: "mango"), sort: .title, skip: 0)
         #expect(searched.cypher.contains("EXISTS { MATCH (b)-[:TAGGED]->(ft:Tag) WHERE ft.name = $tag }"))
         let evil = "x'}) DETACH DELETE (b"
-        let injected = LibraryQueries.page(filter: LibraryFilter(tag: evil), sort: .title, skip: 0)
+        let injected = try LibraryQueries.page(filter: LibraryFilter(tag: evil), sort: .title, skip: 0)
         #expect(!injected.cypher.contains(evil))
         #expect(injected.parameters["tag"] == .string(evil))
         #expect(try await store.libraryPage(filter: LibraryFilter(tag: evil)).isEmpty)
@@ -289,9 +296,9 @@ struct UserDataQueriesTests {
         #expect(want == ["/works/OL5W", "amazon:B000UNRES", "/works/OL3W"])
         try await store.setStatus(key: "/works/OL3W", status: .want, now: t0, calendar: la)   // explicit want
         #expect(try await store.libraryPage(filter: LibraryFilter(status: .want)).map(\.key).contains("/works/OL3W"))
-        let reading = LibraryQueries.page(filter: LibraryFilter(status: .reading), sort: .title, skip: 0)
+        let reading = try LibraryQueries.page(filter: LibraryFilter(status: .reading), sort: .title, skip: 0)
         #expect(reading.cypher.contains("b.reading_status = $status"))
-        let wantStatement = LibraryQueries.page(filter: LibraryFilter(status: .want), sort: .title, skip: 0)
+        let wantStatement = try LibraryQueries.page(filter: LibraryFilter(status: .want), sort: .title, skip: 0)
         #expect(wantStatement.cypher.contains("coalesce(b.reading_status, 'want') = $status"))
     }
 
@@ -322,11 +329,11 @@ struct UserDataQueriesTests {
 
         try await store.createTag(name: "Keep", now: t0)
         await #expect(throws: RelateError.self) {
-            try await store.transaction([Statement("MATCH (t:Tag) DETACH DELETE t"), Statement("RETURN 1/0 AS x")])
+            try await store.write([Statement("MATCH (t:Tag) DETACH DELETE t"), Statement("RETURN 1/0 AS x")])
         }
         #expect(try await store.tags().map(\.name) == ["Keep"])
         #expect(try await store.query("RETURN 41 + 1 AS x").scalar().intValue == 42)
-        let results = try await store.transaction([Statement("RETURN 1 AS x"), Statement("RETURN 2 AS x")])
+        let results = try await store.write([Statement("RETURN 1 AS x"), Statement("RETURN 2 AS x")])
         #expect(results.map { $0.rows.count } == [1, 1])
     }
 
@@ -345,8 +352,10 @@ struct UserDataQueriesTests {
         #expect(Row(["d": .date(.init(year: 2026, month: 11, day: 8))]).day("d") == LocalDay(year: 2026, month: 11, day: 8))
         #expect(Row(["d": .string("2026-11-08")]).day("d") == LocalDay(year: 2026, month: 11, day: 8))
         #expect(Row(["d": .string("Nov 8")]).day("d") == nil)
-        #expect(Timestamps.instant(t0) == "2026-11-08T06:30:00.000Z")
-        #expect(Timestamps.day(t0, calendar: la) == "2026-11-07")
+        // What a status change binds: the instant as a UTC DATETIME, the day as the DATE in the calendar's zone.
+        let bound = try StatusQueries.setStatus(key: "k", status: .read, now: t0, calendar: la).parameters
+        #expect(bound["now"]?.dateTimeValue?.foundationDate == t0 && bound["now"]?.dateTimeValue?.offsetSeconds == 0)
+        #expect(bound["today"] == .date(.init(year: 2026, month: 11, day: 7)))
         #expect(LocalDay(year: 2026, month: 1, day: 2).iso == "2026-01-02")
         #expect(LocalDay(year: 2026, month: 1, day: 2) < LocalDay(year: 2026, month: 1, day: 3))
         #expect(LocalDay(year: 2026, month: 11, day: 7).date(in: la).map { LocalDay($0, calendar: la) } == LocalDay(year: 2026, month: 11, day: 7))

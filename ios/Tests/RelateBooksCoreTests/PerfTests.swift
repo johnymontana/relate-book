@@ -77,17 +77,17 @@ struct PerfTests {
     }
 
     /// Phase-2 reads and idempotent writes (safe to run 6 times).
-    static func userDataStatements(noteID: String) -> [(String, Statement)] {
+    static func userDataStatements(noteID: String) throws -> [(String, Statement)]  {
         [
             ("tags", TagQueries.list),
-            ("tagsForBook Left Hand", TagQueries.forBook(key: leftHand)),
-            ("notes Left Hand", NoteQueries.list(bookKey: leftHand)),
-            ("bookUserData Left Hand", StatusQueries.userData(key: leftHand)),
-            ("setStatus Left Hand read", StatusQueries.setStatus(key: leftHand, status: .read, now: fixedNow, calendar: .current)),
-            ("setRating", StatusQueries.setRating(key: leftHand, rating: 5)),
-            ("addTag Favorites (existing)", TagQueries.addTag(key: leftHand, name: "Favorites", color: .blue, now: fixedNow)),
-            ("renameTag Big->Big", TagQueries.rename(old: "Big", new: "Big")),
-            ("updateNote", NoteQueries.update(id: noteID, text: "Perf note 1 (edited)", now: fixedNow)),
+            ("tagsForBook Left Hand", try TagQueries.forBook(key: leftHand)),
+            ("notes Left Hand", try NoteQueries.list(bookKey: leftHand)),
+            ("bookUserData Left Hand", try StatusQueries.userData(key: leftHand)),
+            ("setStatus Left Hand read", try StatusQueries.setStatus(key: leftHand, status: .read, now: fixedNow, calendar: .current)),
+            ("setRating", try StatusQueries.setRating(key: leftHand, rating: 5)),
+            ("addTag Favorites (existing)", try TagQueries.addTag(key: leftHand, name: "Favorites", color: .blue, now: fixedNow)),
+            ("renameTag Big->Big", try TagQueries.rename(old: "Big", new: "Big")),
+            ("updateNote", try NoteQueries.update(id: noteID, text: "Perf note 1 (edited)", now: fixedNow)),
         ]
     }
 
@@ -141,26 +141,26 @@ struct PerfTests {
         return EmbeddingSeed(bookRows: rows, query: rng.unitVector())
     }
 
-    static func searchStatements(seed: EmbeddingSeed, hydrateKeys: [String]) -> [(String, Statement)] {
+    static func searchStatements(seed: EmbeddingSeed, hydrateKeys: [String]) throws -> [(String, Statement)]  {
         var list: [(String, Statement)] = [
-            ("semantic top50", SearchQueries.semantic(vector: seed.query, limit: 50)),
+            ("semantic top50", try SearchQueries.semantic(vector: seed.query, limit: 50)),
         ]
         for text in ["lonely astronaut saves earth", "le guin", "history"] {
             let q = KeywordQuery(text)!
-            list.append(("bookText [\(text)]", SearchQueries.bookText(q, limit: 50)))
-            list.append(("itemText [\(text)]", SearchQueries.itemText(q, limit: 50)))
+            list.append(("bookText [\(text)]", try SearchQueries.bookText(q, limit: 50)))
+            list.append(("itemText [\(text)]", try SearchQueries.itemText(q, limit: 50)))
         }
         list += [
-            ("notes top20", SearchQueries.notes(vector: seed.query, limit: 20)),
-            ("moreLikeThis Project Hail Mary", SearchQueries.moreLikeThis(key: hailMary)),
-            ("moreLikeThis Left Hand", SearchQueries.moreLikeThis(key: leftHand)),
-            ("hydrate \(hydrateKeys.count) keys [none]", SearchQueries.hydrate(keys: hydrateKeys, filter: SearchFilter(), limit: 50)),
-            ("hydrate \(hydrateKeys.count) keys [status=want]", SearchQueries.hydrate(keys: hydrateKeys, filter: SearchFilter(status: .want), limit: 50)),
-            ("hydrate \(hydrateKeys.count) keys [tag=Big]", SearchQueries.hydrate(keys: hydrateKeys, filter: SearchFilter(tag: "Big"), limit: 50)),
-            ("scanBooks after \"\" (200)", EmbeddingQueries.scanBooks(after: "")),
-            ("scanBooks after /works/OL2 (200)", EmbeddingQueries.scanBooks(after: "/works/OL2")),
+            ("notes top20", try SearchQueries.notes(vector: seed.query, limit: 20)),
+            ("moreLikeThis Project Hail Mary", try SearchQueries.moreLikeThis(key: hailMary)),
+            ("moreLikeThis Left Hand", try SearchQueries.moreLikeThis(key: leftHand)),
+            ("hydrate \(hydrateKeys.count) keys [none]", try SearchQueries.hydrate(keys: hydrateKeys, filter: SearchFilter(), limit: 50)),
+            ("hydrate \(hydrateKeys.count) keys [status=want]", try SearchQueries.hydrate(keys: hydrateKeys, filter: SearchFilter(status: .want), limit: 50)),
+            ("hydrate \(hydrateKeys.count) keys [tag=Big]", try SearchQueries.hydrate(keys: hydrateKeys, filter: SearchFilter(tag: "Big"), limit: 50)),
+            ("scanBooks after \"\" (200)", try EmbeddingQueries.scanBooks(after: "")),
+            ("scanBooks after /works/OL2 (200)", try EmbeddingQueries.scanBooks(after: "/works/OL2")),
             ("scanNotes all", EmbeddingQueries.scanNotes(bookKey: nil)),
-            ("writeBooks 32 rows", EmbeddingQueries.writeBooks(Array(seed.bookRows.prefix(32)), model: "perf-random")),
+            ("writeBooks 32 rows", try EmbeddingQueries.writeBooks(Array(seed.bookRows.prefix(32)), model: "perf-random")),
         ]
         return list
     }
@@ -168,33 +168,33 @@ struct PerfTests {
     // MARK: Phase 4 (the geocoded store)
 
     /// The 16 place statements, all under `placeBudgetMs`.
-    static func placeStatements() -> [(String, Statement)] {
+    static func placeStatements() throws -> [(String, Statement)]  {
         let antimeridian = GeoBox(south: -30, west: 170, north: 0, east: -160).split()
         var list: [(String, Statement)] = [
-            ("placeRegion world", PlaceQueries.region(.world)),
-            ("placeRegion US", PlaceQueries.region(GeoBox(south: 24, west: -125, north: 50, east: -66))),
-            ("placeRegion Europe", PlaceQueries.region(GeoBox(south: 35, west: -10, north: 60, east: 30))),
-            ("placeRegion Montana", PlaceQueries.region(GeoBox(south: 44.3, west: -116.1, north: 49.1, east: -104.0))),
-            ("placeRegion Seattle", PlaceQueries.region(GeoBox(south: 47, west: -123, north: 48, east: -122))),
-            ("placeRegion antimeridian 170..180", PlaceQueries.region(antimeridian[0])),
-            ("placeRegion antimeridian -180..-160", PlaceQueries.region(antimeridian[1])),
+            ("placeRegion world", try PlaceQueries.region(.world)),
+            ("placeRegion US", try PlaceQueries.region(GeoBox(south: 24, west: -125, north: 50, east: -66))),
+            ("placeRegion Europe", try PlaceQueries.region(GeoBox(south: 35, west: -10, north: 60, east: 30))),
+            ("placeRegion Montana", try PlaceQueries.region(GeoBox(south: 44.3, west: -116.1, north: 49.1, east: -104.0))),
+            ("placeRegion Seattle", try PlaceQueries.region(GeoBox(south: 47, west: -123, north: 48, east: -122))),
+            ("placeRegion antimeridian 170..180", try PlaceQueries.region(antimeridian[0])),
+            ("placeRegion antimeridian -180..-160", try PlaceQueries.region(antimeridian[1])),
         ]
         for text in ["mont", "new york", "an"] {
-            list.append(("placeSearch [\(text)]", PlaceQueries.search(text)))
+            list.append(("placeSearch [\(text)]", try PlaceQueries.search(text)))
         }
         list += [
-            ("placeSummary San Francisco", PlaceQueries.summary(label: "San Francisco")),
-            ("placeBooks San Francisco p0", PlaceQueries.books(label: "San Francisco", skip: 0)),
-            ("placeBooks United States p0", PlaceQueries.books(label: "United States", skip: 0)),
-            ("placeAuthors New York City", PlaceQueries.authors(label: "New York City")),
-            ("placeResolve San Francisco", PlaceQueries.resolve("San Francisco")),
-            ("placeLocation San Francisco", PlaceQueries.location(name: "San Francisco")),
-            ("placesNear Missoula 500 km", PlaceQueries.nearMe(GeoCoordinate(latitude: 46.87, longitude: -113.99), radiusMeters: 500_000)),
+            ("placeSummary San Francisco", try PlaceQueries.summary(label: "San Francisco")),
+            ("placeBooks San Francisco p0", try PlaceQueries.books(label: "San Francisco", skip: 0)),
+            ("placeBooks United States p0", try PlaceQueries.books(label: "United States", skip: 0)),
+            ("placeAuthors New York City", try PlaceQueries.authors(label: "New York City")),
+            ("placeResolve San Francisco", try PlaceQueries.resolve("San Francisco")),
+            ("placeLocation San Francisco", try PlaceQueries.location(name: "San Francisco")),
+            ("placesNear Missoula 500 km", try PlaceQueries.nearMe(GeoCoordinate(latitude: 46.87, longitude: -113.99), radiusMeters: 500_000)),
         ]
         return list
     }
 
-    static func statements() -> [(String, Statement)] {
+    static func statements() throws -> [(String, Statement)]  {
         var list: [(String, Statement)] = []
         let filters: [(String, LibraryFilter)] = [
             ("none", LibraryFilter()),
@@ -214,13 +214,13 @@ struct PerfTests {
         ]
         for sort in LibrarySort.allCases {
             for (fname, filter) in filters {
-                list.append(("libraryPage \(sort.rawValue) [\(fname)] p0", LibraryQueries.page(filter: filter, sort: sort, skip: 0)))
+                list.append(("libraryPage \(sort.rawValue) [\(fname)] p0", try LibraryQueries.page(filter: filter, sort: sort, skip: 0)))
             }
-            list.append(("libraryPage \(sort.rawValue) [none] skip 1760", LibraryQueries.page(filter: LibraryFilter(), sort: sort, skip: 1760)))
+            list.append(("libraryPage \(sort.rawValue) [none] skip 1760", try LibraryQueries.page(filter: LibraryFilter(), sort: sort, skip: 1760)))
         }
-        list.append(("libraryPage title [tag=Big] skip 160", LibraryQueries.page(filter: LibraryFilter(tag: "Big"), sort: .title, skip: 160)))
+        list.append(("libraryPage title [tag=Big] skip 160", try LibraryQueries.page(filter: LibraryFilter(tag: "Big"), sort: .title, skip: 160)))
         for (fname, filter) in filters {
-            list.append(("libraryCount [\(fname)]", LibraryQueries.count(filter: filter)))
+            list.append(("libraryCount [\(fname)]", try LibraryQueries.count(filter: filter)))
         }
         list.append(("formatFacets", LibraryQueries.formatFacets))
         list.append(("genreFacets", LibraryQueries.genreFacets))
@@ -230,11 +230,11 @@ struct PerfTests {
             ("Curious Incident (most subjects)", "/works/OL2965102W"),
             ("clone Left Hand ~299", "/works/OL59800W~299"),
         ] {
-            list.append(("bookDetail \(name)", BookQueries.detail(key: key)))
+            list.append(("bookDetail \(name)", try BookQueries.detail(key: key)))
         }
         for (name, key) in [("Ursula K. Le Guin", "/authors/OL31353A"), ("Kim Stanley Robinson", "/authors/OL19986A")] {
-            list.append(("authorDetail \(name)", AuthorQueries.detail(key: key)))
-            list.append(("authorBooks \(name)", AuthorQueries.books(key: key)))
+            list.append(("authorDetail \(name)", try AuthorQueries.detail(key: key)))
+            list.append(("authorBooks \(name)", try AuthorQueries.books(key: key)))
         }
         let terms: [(TermKind, String)] = [
             (.subject, "Fiction"), (.genre, "science fiction"), (.series, "Hainish Cycle"),
@@ -243,14 +243,14 @@ struct PerfTests {
             (.award, "Locus Award for Best Novella"), (.country, "United States"),
         ]
         for (kind, name) in terms {
-            list.append(("termBooks \(kind.rawValue)=\(name) p0", TermQueries.books(kind, name: name, skip: 0)))
-            list.append(("termSummary \(kind.rawValue)=\(name)", TermQueries.summary(kind, name: name)))
-            if let authors = TermQueries.authors(kind, name: name) {
+            list.append(("termBooks \(kind.rawValue)=\(name) p0", try TermQueries.books(kind, name: name, skip: 0)))
+            list.append(("termSummary \(kind.rawValue)=\(name)", try TermQueries.summary(kind, name: name)))
+            if let authors = try TermQueries.authors(kind, name: name) {
                 list.append(("termAuthors \(kind.rawValue)=\(name)", authors))
             }
         }
-        list.append(("termBooks subject=Fiction skip 280", TermQueries.books(.subject, name: "Fiction", skip: 280)))
-        list.append(("termBooks country=United States skip 480", TermQueries.books(.country, name: "United States", skip: 480)))
+        list.append(("termBooks subject=Fiction skip 280", try TermQueries.books(.subject, name: "Fiction", skip: 280)))
+        list.append(("termBooks country=United States skip 480", try TermQueries.books(.country, name: "United States", skip: 480)))
         return list
     }
 
@@ -327,12 +327,12 @@ struct PerfTests {
         #expect(try await store.hydrateSearch(keys: hydrateKeys, limit: 50).map(\.key) == Array(hydrateKeys.prefix(50)))
 
         var results: [Measurement] = []
-        for (name, statement) in Self.statements() + Self.userDataStatements(noteID: noteID)
+        for (name, statement) in try Self.statements() + Self.userDataStatements(noteID: noteID)
             + Self.searchStatements(seed: seed, hydrateKeys: hydrateKeys) {
             results.append(try await Self.measure(store, name, statement))
         }
         var placeResults: [Measurement] = []
-        for (name, statement) in Self.placeStatements() {
+        for (name, statement) in try Self.placeStatements() {
             placeResults.append(try await Self.measure(store, name, statement))
         }
         results += placeResults
