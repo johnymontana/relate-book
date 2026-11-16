@@ -260,14 +260,22 @@ struct SearchServiceTests {
         #expect(try await service.moreLikeThis(key: "/works/S1W", limit: 3).count == 3)
     }
 
-    @Test("the engine accepts hostile fulltext strings, raw and sanitized (V6)")
+    @Test("hostile fulltext strings: the sanitizer's output is always accepted; raw, only a trailing backslash is refused (V6)")
     func hostileStrings() async throws {
         let store = try await Self.store()
-        for raw in ["\"quoted\"", "a:b", "(x)", "x*", "AND", "\\", "[x]", "{x}", "&&", "?"] {
+        for raw in ["\"quoted\"", "a:b", "(x)", "x*", "AND", "\\", "x\\", "\\x", "[x]", "{x}", "&&", "?"] {
             let rawQuery = KeywordQuery(terms: [raw])
-            _ = try await store.bookTextHits(rawQuery, limit: 50)
-            _ = try await store.itemTextHits(rawQuery, limit: 50)
+            if raw.hasSuffix("\\") {
+                // Relate main (after 1.0.1): a trailing backslash escapes
+                // nothing and is a syntax error. 1.0.1 accepted it.
+                await #expect(throws: RelateError.self) { _ = try await store.bookTextHits(rawQuery, limit: 50) }
+                await #expect(throws: RelateError.self) { _ = try await store.itemTextHits(rawQuery, limit: 50) }
+            } else {
+                _ = try await store.bookTextHits(rawQuery, limit: 50)
+                _ = try await store.itemTextHits(rawQuery, limit: 50)
+            }
             if let sanitized = KeywordQuery(raw) {
+                #expect(!sanitized.text.contains("\\"))
                 _ = try await store.bookTextHits(sanitized, limit: 50)
                 _ = try await store.itemTextHits(sanitized, limit: 50)
             }

@@ -18,35 +18,45 @@ The full roadmap is in [`../docs/ios-app-plan.md`](../docs/ios-app-plan.md).
 
 - **Full Xcode 27 or later.** Swift Testing macros need it. With only the CommandLineTools, `swift test` fails with "plugin for module 'TestingMacros' not found".
 - **xcodegen** (`brew install xcodegen`).
-- **Network on first resolve.** Relate 1.0.1 is the published Swift package `https://github.com/relatedb/relate`, pinned with `exact: "1.0.1"` in `Package.swift` and `exactVersion: 1.0.1` in `project.yml`. SwiftPM downloads its checksum-pinned `RelateFFI.xcframework.zip` (312,503,014 bytes) once and caches it. `Package.resolved` (for `swift`) and `RelateBooks.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` (for Xcode) record the revision, `ef436ce`. The exact pin is deliberate: tests and these notes record engine behaviour, so an upgrade should be a reviewed change.
+- **Relate from source, for now.** The app uses the Swift API that Relate's `main` branch gained after 1.0.1 (ADR-0596: managed `read`/`write`, `Statement`, `Record`, the Foundation, Core Location and vector bridges, `Migrator`, `Database.provision`, the trace handler). No release carries it yet, so both manifests depend on a source snapshot by path (`Vendor/relate`, git-ignored), and the engine is built locally:
 
-`RELATE_LOCAL_XCFRAMEWORK` is no longer used. It only affects a path dependency on a Relate checkout. To try an unreleased engine, point both manifests at a checkout with `scripts/build-xcframework.sh` run in it, and set the variable again.
+  ```sh
+  scripts/setup_relate.sh          # all slices; `scripts/setup_relate.sh macos` builds only what `swift test` needs
+  export RELATE_LOCAL_XCFRAMEWORK=1
+  ```
+
+  The script downloads `relatedb/relate` at the commit it pins (`af8c2e4`, `main` on 2026-11-15) and runs Relate's `scripts/build-xcframework.sh` there, with the Rust toolchain Relate pins (it needs `rustup` and the five Apple targets; the build names a missing one). On this Mac (M4 Max) that is five release builds of the engine at about a minute and a half each, and `Vendor/relate` is 1.5 GB afterwards. `RELATE_LOCAL_XCFRAMEWORK=1` tells Relate's `Package.swift` to link that framework instead of downloading a release binary; without it, package resolution fails on a release asset that does not exist. Every `swift` and `xcodebuild` command below needs it. Because the dependency is a path, neither `Package.resolved` exists any more (SwiftPM and Xcode each removed theirs); the pin is the commit in the script. Change it only as a reviewed upgrade: tests and these notes record engine behaviour.
+- **Going back to a release.** When a Relate release contains the API, restore `.package(url: "https://github.com/relatedb/relate", exact: "<version>")` in `Package.swift` and `url` + `exactVersion` in `project.yml`, run `xcodegen generate`, delete `scripts/setup_relate.sh` and `Vendor/`, and drop the environment variable.
 
 ## Build
 
 ```sh
 cd ios
 scripts/refresh_store.sh [path]     # only to bundle a different export (default ../books.rl)
+scripts/setup_relate.sh             # once, and after the pinned Relate commit changes (see Requirements)
+export RELATE_LOCAL_XCFRAMEWORK=1   # for every swift and xcodebuild command
 xcodegen generate                   # after adding/removing files
 swift test                          # core tests on the Mac (macOS slice)
 xcodebuild -project RelateBooks.xcodeproj -scheme RelateBooks \
   -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/rb-dd build
 ```
 
-- `swift test` should end with `Test run with 266 tests in 35 suites passed` (phase 4 was 156 in 21). An extra XCTest line, "Executed 0 tests", is normal. Parameterized tests count once.
-- The **perf suite** (`PerfTests.swift`) bootstraps a temp copy of `RelateBooks/Resources/books.rl`, grows it to 1,800 books with `ScaledLibrary` (300 copies of the six sample books, authors and editions under distinct keys; shared subjects, awards and other terms; the first 30 copies also clone the places at shifted coordinates, for 570 located places and 510 map labels), and runs 187 library, detail, term, user-data, search and place queries, including the recently-updated sort and the tag filter. The perf store is seeded with statuses on 300 books, a 200-book tag, a 3-book tag, random unit 384-d vectors on 400–402 books and 60 embedded notes. The real model never runs in PerfTests. Current lines (2026-11-12, relate 1.0.1, scaled sample, median of 5 warm runs, this Mac):
+- `swift test` should end with `Test run with 270 tests in 35 suites passed` (phase 5 was 266 in 35). An extra XCTest line, "Executed 0 tests", is normal. Parameterized tests count once.
+- The **perf suite** (`PerfTests.swift`) bootstraps a temp copy of `RelateBooks/Resources/books.rl`, grows it to 1,800 books with `ScaledLibrary` (300 copies of the six sample books, authors and editions under distinct keys; shared subjects, awards and other terms; the first 30 copies also clone the places at shifted coordinates, for 570 located places and 510 map labels), and runs 187 library, detail, term, user-data, search and place queries, including the recently-updated sort and the tag filter. The perf store is seeded with statuses on 300 books, a 200-book tag, a 3-book tag, random unit 384-d vectors on 400–402 books and 60 embedded notes. The real model never runs in PerfTests. Current lines (2026-11-15, Relate `main` at the pinned commit, scaled sample, median of 5 warm runs, this Mac; the 2026-11-12 run on 1.0.1 had a slowest median of 22.31 ms):
 
   ```
   PERF places: 570 located, 510 world pins
-  PERF semantic top50: cold 4.12 ms, median 3.48 ms, max 3.54 ms, rows 50
-  PERF bookText [lonely astronaut saves earth]: cold 22.62 ms, median 21.80 ms, max 22.01 ms, rows 50
-  PERF moreLikeThis Project Hail Mary: cold 4.01 ms, median 3.83 ms, max 3.94 ms, rows 10
-  PERF placeRegion world: cold 12.57 ms, median 12.50 ms, max 12.71 ms, rows 510
-  PERF placeBooks San Francisco p0: cold 2.36 ms, median 2.14 ms, max 2.15 ms, rows 40
-  PERF placeAuthors New York City: cold 1.63 ms, median 1.45 ms, max 1.47 ms, rows 271
-  PERF summary: 187 queries; slowest median 22.31 ms (libraryPage author [none] skip 1760)
-  PERF import summary: 19 queries; slowest median 21.28 ms (import bookText [perfect storm])
+  PERF semantic top50: cold 3.92 ms, median 3.63 ms, max 3.72 ms, rows 50
+  PERF bookText [lonely astronaut saves earth]: cold 23.74 ms, median 22.48 ms, max 22.67 ms, rows 50
+  PERF moreLikeThis Project Hail Mary: cold 4.12 ms, median 3.82 ms, max 3.90 ms, rows 10
+  PERF placeRegion world: cold 10.75 ms, median 10.26 ms, max 10.37 ms, rows 510
+  PERF placeBooks San Francisco p0: cold 2.08 ms, median 1.93 ms, max 1.95 ms, rows 40
+  PERF placeAuthors New York City: cold 1.66 ms, median 1.44 ms, max 1.60 ms, rows 271
+  PERF summary: 187 queries; slowest median 22.48 ms (bookText [lonely astronaut saves earth])
+  PERF import summary: 19 queries; slowest median 22.70 ms (import bookText [perfect storm])
   ```
+
+  These are engine-reported statement times. Every write now runs inside a transaction, and the write lines are far lower than a statement that commits itself would be (`writeBooks 32 rows` reads 0.37 ms), so they most likely no longer include the commit; that was not isolated. What a screen waits for is the wall-clock time of the call, which the reader pool changes: on the same scaled store, the first library page took 4.1 ms (median) with nothing else running, and 4.5 ms median, 7.5 ms at the 95th percentile and 9 ms at worst while the indexer embedded all 1,800 books with the instant test embedder. Before the migration (one connection behind an actor, Relate 1.0.1) the same measurement gave 5.0 ms idle and 11 ms median, 15 ms at the 95th percentile and about 470 ms at worst during indexing. Three runs each, about 300 and 125 page reads during indexing; a one-off test, not part of the suite.
 
   The historical lines below were measured on the original 1,811-book export (phases 3–5, relate 0.16.1) and are kept for comparison. Phase 3 lines:
 
@@ -309,7 +319,7 @@ The lists are fused with reciprocal rank fusion: k = 60, equal weights, with tie
 
 - Relate's SEARCH score for cosine is `(1 + cos) / 2`. Swift reports `cos = 2·score − 1`, so "Semantic 0.59" is a cosine.
 - **Why the gate.** Relate 0.16.1 fulltext ORs the lowercase terms and scores by raw term frequency. Without the gate, plain RRF put five "Earth" titles ahead of Project Hail Mary for the acceptance query.
-- **Fulltext facts (0.16.1; re-checked on 1.0.1).** There is no stemming and no accent folding. In 0.16.1 there was no operator syntax: AND, OR and NOT were ordinary words. In 1.0.1 the **upper-case** `AND`, `OR` and `NOT` are operators: `hail AND mary` matches 1 book where `hail mary` matches 4. Lower-case `and`/`or`/`not` are still words. `KeywordQuery` lower-cases its terms and drops and/or/not as stopwords, so the app never sends an operator; `SearchTests.hostileStrings` pins both behaviours. Quotes, colons, parentheses, `*` (not a wildcard), `+`, `-` and so on are still separators. Every input is accepted, and an empty string returns 0 rows. A query costs about 16 ms (`book_text`) or 12 ms (`item_text`) whatever the query (1.0.1, CLI on a store copy: 17.5–18.2 ms for `book_text`). A pattern comprehension directly after a fulltext SEARCH costs about 4 ms per row, so the queries use `WITH … OPTIONAL MATCH … collect` instead.
+- **Fulltext facts (0.16.1; re-checked on 1.0.1).** There is no stemming and no accent folding. In 0.16.1 there was no operator syntax: AND, OR and NOT were ordinary words. In 1.0.1 the **upper-case** `AND`, `OR` and `NOT` are operators: `hail AND mary` matches 1 book where `hail mary` matches 4. Lower-case `and`/`or`/`not` are still words. `KeywordQuery` lower-cases its terms and drops and/or/not as stopwords, so the app never sends an operator; `SearchTests.hostileStrings` pins both behaviours. Quotes, colons, parentheses, `*` (not a wildcard), `+`, `-` and so on are still separators. Every input is accepted, and an empty string returns 0 rows. A query costs about 16 ms (`book_text`) or 12 ms (`item_text`) whatever the query (1.0.1, CLI on a store copy: 17.5–18.2 ms for `book_text`). A pattern comprehension directly after a fulltext SEARCH costs about 4 ms per row, so the queries use `WITH … OPTIONAL MATCH … collect` instead. On Relate `main` after 1.0.1 (the pinned commit) one raw input is refused: a query string that ends in a backslash is a syntax error ("a trailing `\` escapes nothing"). `KeywordQuery` only ever sends letters, digits and spaces, so the app is unaffected; `SearchTests.hostileStrings` pins the refusal.
 - **Sanitizer** (`KeywordQuery`). It lowercases, takes runs of letters and digits, and drops 1-character tokens and stopwords (including and/or/not and book/books). It dedupes and keeps at most 8 terms. With no terms left, both fulltext queries are skipped. It exists for ranking and the gate, not for safety.
 - **More like this** is one statement that uses the book's stored vector as the `FOR` expression (`MATCH (s:Book {key:$key}) WITH s, s.embedding AS q MATCH (b:Book) SEARCH b IN (VECTOR INDEX book_embedding FOR q LIMIT $probe) SCORE AS score WHERE b <> s …`). It returns the top 10 and excludes the seed. A book that is not embedded yet gives an empty list, and the section says "Similar books appear once indexing finishes".
 - **While indexing**, search uses whatever is embedded plus the keyword list, and the results header says "Semantic results cover 412 of 1,811 books so far".
@@ -320,10 +330,10 @@ The lists are fused with reciprocal rank fusion: k = 60, equal weights, with tie
 From `ios/`:
 
 ```sh
-open RelateBooks.xcodeproj
+open -a Xcode --env RELATE_LOCAL_XCFRAMEWORK=1 RelateBooks.xcodeproj
 ```
 
-Xcode resolves Relate 1.0.1 from GitHub on first open. No environment variable is needed.
+Xcode resolves Relate from `Vendor/relate` (run `scripts/setup_relate.sh` first). It has to be started with the variable, as above, and with no other Xcode window open: an Xcode that is already running keeps the environment it started with.
 
 ## Layout
 
@@ -331,6 +341,7 @@ Xcode resolves Relate 1.0.1 from GitHub on first open. No environment variable i
 ios/
   project.yml                 xcodegen spec -> RelateBooks.xcodeproj (generated; regenerate after adding files)
   Package.swift               SwiftPM: RelateBooksCore library + RelateBooksCoreTests (Swift Testing)
+  scripts/setup_relate.sh     fetches Relate at the pinned commit into Vendor/relate and builds its XCFramework
   scripts/refresh_store.sh    re-copies ../books.rl into Resources
   scripts/convert_embedding_model.py + requirements-embedding.txt
                               reproducible MiniLM -> Core ML conversion and test fixtures (run with uv)
@@ -355,7 +366,7 @@ ios/
     OpenLibrary/              HTTPTransport (+ URLSessionTransport), RequestGate, OpenLibraryClient, OpenLibraryModels,
                               ISBN, ImportDraft, BookImporter; DEBUG StubOpenLibraryTransport + StubOpenLibraryFixtures
     Geo/                      HeadingNormalizer, PlaceGeocoder, CLPlaceGeocoder, PlaceLocator; DEBUG StubPlaceGeocoder
-    Graph/                    GraphStore actor, Schema (UI-free, testable)
+    Graph/                    GraphStore (one Relate Database), Schema (a Relate Migrator); UI-free, testable
       Queries/                LibraryQueries, BookQueries, AuthorQueries, TermQueries,
                               StatusQueries, TagQueries, NoteQueries, EmbeddingQueries, SearchQueries, PlaceQueries,
                               ImportQueries
@@ -364,7 +375,7 @@ ios/
                               AuthorDetail, AuthorSummary, TermKind, TermSummary, LibraryFilter, LibrarySort, ReadingStatus,
                               UserData (BookUserData, TagSummary, BookTag, BookNote, TagColor, LocalDay, UserDataError),
                               Place (GeoCoordinate, GeoBox, PinTier, PlacePin, PlaceSummary, PlaceLocation, NearbyPlace)
-      Decoding/Row.swift      tolerant typed accessors over result records, Statement, GraphStore.run
+      Decoding/Row.swift      tolerant typed accessors over Relate records
     Navigation/Route.swift    Route (book/author/term/tag/addBook/addedBook), AddedBookNotice, AppTab and LaunchOptions
     ViewModels/               @MainActor @Observable LibraryModel, PagedBooks, BookDetailModel, AuthorModel, TermModel,
                               TagsModel, TagBooksModel, IndexingModel, SearchModel, MapModel + PlaceSheetModel, AddBookModel;
@@ -387,16 +398,21 @@ The same sources are built two ways, in two separate build graphs:
 
 **Rule for new folders.** When you add a UI folder directly under `RelateBooks/` (for example `Features/`), add it to `exclude` in `Package.swift` and run `xcodegen generate`. New subfolders of `Features/` are already covered. A **resource** folder goes in `resources` (`.copy`) in `Package.swift`, not `exclude`, and gets a matching `type: folder` entry plus an `excludes` line in `project.yml`. List only folders that exist, because SwiftPM warns about invalid excludes.
 
-`Connection` is not `Sendable`. Only the `GraphStore` actor touches it. View models are `@MainActor` and `await` the actor, and views never contain Cypher.
+`GraphStore` is a `Sendable` value around one Relate `Database`, opened once. The database owns the connections: one writer and up to two readers, each on its own queue. A query method runs its statement with `read` (a transaction that is rolled back, on a reader) or `write` (one transaction on the writer); several statements that must agree share one `database.read { }` or `database.write { }`. Reads do not wait for a write in progress. View models are `@MainActor` and `await` the store, and views never contain Cypher.
+
+- **Statements** are `Relate.Statement` values with named parameters, built with Swift values: `try Statement("MATCH (b:Book {key: $key}) …", ["key": key, "rating": rating, "now": now])`. Building one can throw (a value Cypher cannot hold), so the builders in `Graph/Queries` are `throws`. A filter that has several optional parts builds a statement and `append`s to it, which carries the parameters along (`LibraryQueries.page`).
+- **One trap.** `Statement("…\(x)…")` with one argument is a statement *literal*: `\(x)` is bound as a parameter, not spliced into the text. Splice program text with `\(raw: x)` and a label with `\(identifier: x)`. With a parameter dictionary as the second argument the text is an ordinary Swift string, which is how the builders here are written.
+- **Subqueries.** The engine reports any statement that contains a `CALL { }` subquery as read-write, and a managed read refuses a statement that is not a read. The library's text search and the ISBN lookup are such statements; they run through `GraphStore.readWithSubquery`, on the writer, and commit nothing.
+- **Logging.** The database's trace handler writes one line per statement to the `query` log channel (rows, engine and wall time, the first 160 characters of the text, marked private). Each statement is also a signpost interval in Instruments (subsystem `ai.relatedb.relate`).
 
 **User-data writes** all go through the one `UserDataController` in `AppSession`. It writes through `GraphStore`, re-reads the book's `BookUserData`, and publishes a `UserDataChange`. Every model that shows that book patches its rows in place, or marks itself for reload on appear when the change could move rows (a status filter, the recently-updated sort, or a tag filter). Book detail updates optimistically and takes the re-read value; on error it restores its snapshot and shows an alert. Note saves and tag create/rename wait for the write, so the sheet or alert stays open with the text on error. Each write is a single statement. The multi-statement transactions are the DEBUG reset and (phase 5) a book import, which goes through `UserDataController.saveImportedBook` and publishes `.bookAdded`.
 
 **Query conventions.** Each list query filters `Book`s, computes one `sortKey` per book, sorts, applies `SKIP $skip LIMIT $limit`, and only then joins authors (`collect(DISTINCT a.name)`, since the store has same-name Author nodes) and one wishlist item (`LibraryQueries.summaryProjection()`): the first by position, or, while a format filter is on, the first item in that format. Image URLs decode through `Row.imageURL`, which upgrades `http` to `https`, so no ATS exception is needed. Only active filters go into the WHERE clause; every value is a parameter. Search text runs as a UNION of three label scans (book titles, author names, item titles); on the real store that measured about 3x faster than per-book `EXISTS` subqueries. Detail queries use pattern comprehensions, so a book with many subjects and several items does not fan out.
 
 - **Tag filter.** When there is no search text, a tag-filtered page starts at the `Tag` (`MATCH (t:Tag {name: $tag})<-[:TAGGED]-(b:Book)`) instead of testing each book with `EXISTS`. That takes 0.2–3.7 ms instead of 7–10 ms.
-- **Timestamp policy.** Swift passes every time as an ISO-8601 string parameter. `$now` (UTC, milliseconds) is stored with `datetime($now)`. `$today` (the user's local calendar day) is stored with `date($today)`. App statements never call argument-less `date()` or `datetime()`: the engine clock is UTC, so `date()` would give tomorrow's date on a US evening. `started_on` and `finished_on` are DATE values; `status_changed_on`, `Tag.created_on`, `TAGGED.on`, `Note.created_on` and `Note.updated_on` are DATETIME values.
+- **Timestamp policy.** A statement binds times as values. `$now` is a `Foundation.Date`, stored as a UTC DATETIME to the microsecond. `$today` is `CypherValue.Date(now, in: calendar.timeZone)`, the calendar day in the user's time zone, stored as a DATE. Stores written by earlier builds hold the same DATETIME and DATE types (at millisecond precision), so old and new values compare and sort together. App statements never call argument-less `date()` or `datetime()`: the engine clock is UTC, so `date()` would give tomorrow's date on a US evening. `started_on` and `finished_on` are DATE values; `status_changed_on`, `Tag.created_on`, `TAGGED.on`, `Note.created_on` and `Note.updated_on` are DATETIME values.
 - **Defaults are never written.** A missing `reading_status` means Want. It is written only on a book the user touched. "Recently updated" counts status changes only.
-- **Transactions.** Never create and then delete the same node inside one explicit transaction. Relate panics ("update counters are non-negative") and poisons the handle. This happened on 0.16.1 and was re-checked on 1.0.1 (2026-11-12) with a standalone Swift repro: still present (LABS-1188).
+- **Transactions.** Never create and then delete the same node inside one explicit transaction. Relate panics ("update counters are non-negative") and poisons the connection. This happened on 0.16.1 and was re-checked on 1.0.1 (2026-11-12) with a standalone Swift repro, and on the pinned `main` (2026-11-15) through `Database.write`: still present (LABS-1188). There the write throws an internal error, the pool replaces the connection, and the next call works.
 
 ## Binary size
 
@@ -423,11 +439,12 @@ A Debug simulator build is not a size measure. It puts the code in `RelateBooks.
 
 ## Store lifecycle
 
-- **First launch.** `GraphStore.bootstrap` copies the bundled `books.rl` to `Application Support/library.rl`. It copies to a temp name, sets mode 0600 and `FileProtectionType.completeUntilFirstUserAuthentication`, then moves the file into place. It then opens the copy, runs the idempotent schema migration (`Schema.swift`, tracked by `(:AppMeta {key:'schema_version'})`), and checkpoints.
+- **First launch.** `GraphStore.bootstrap` calls `Database.provision` to copy the bundled `books.rl` to `Application Support/library.rl` (`Database.defaultStoreURL`). The copy goes to a temporary name, gets mode 0600 and `FileProtectionType.completeUntilFirstUserAuthentication`, and is then moved into place. The app then opens the copy, migrates it and checkpoints.
+- **Schema.** `Schema.migrator` is a Relate `Migrator`: the index and constraint statements run on every launch, and the version is `(:AppMeta {key: 'schema_version'}).version` (2). Builds before the migrator kept it in `.value`; `Schema.migrate` moves it across first, so an installed store upgrades in place. A store written by a newer build is refused before anything runs.
 - **Later launches** reuse the existing `library.rl`. The bundled file is never opened in place.
 - **To reset**, delete the app from the device or simulator.
-- **Interrupted first launch.** The copy goes to `.library.rl.<UUID>.tmp`. A temp file left behind by an interrupted copy is deleted before the next copy starts, and a failed copy removes its own temp file.
-- **Poisoned connection.** If a query throws `RelateError.engine` with stage `.internal`, the SDK treats the handle as poisoned. `GraphStore.query` rethrows the error without retrying and opens a fresh `Connection`, so the next call works again.
+- **Interrupted first launch.** A failed copy removes its own temporary file, and a later launch removes one that an interrupted launch left behind, once it is more than ten minutes old (`Database.provision`).
+- **Poisoned connection.** After a call fails at stage `.internal`, the database probes the connection it ran on and replaces a poisoned one on the next use. The error is rethrown and nothing is retried.
 - **Checkpoint.** `AppEnvironment.checkpoint()` runs when the scene goes to the background (and after the DEBUG reset), never per write. Writes are already durable through the WAL inside the `.rl` file.
 - **User data** (status, rating, tags, notes, and books added in the app) lives only in `library.rl`. Deleting the app deletes it; export and import come in phase 6.
 - **One process at a time.** A `.rl` store is single-file (the WAL lives inside it) and takes an exclusive lock, so only one process can open it.

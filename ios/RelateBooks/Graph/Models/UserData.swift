@@ -261,20 +261,3 @@ enum NoteText {
         return text
     }
 }
-
-/// The timestamp policy (decided once): Swift passes every time as an
-/// ISO-8601 string parameter and Cypher wraps it, `datetime($now)` or
-/// `date($today)`. App statements never call argument-less `date()` /
-/// `datetime()`: the engine clock is UTC, so `date()` would be "tomorrow"
-/// on a US evening.
-enum Timestamps {
-    /// UTC with milliseconds: "2026-11-08T13:00:00.123Z".
-    static func instant(_ date: Date) -> String {
-        date.formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true))
-    }
-
-    /// The user's local calendar day: "2026-11-08".
-    static func day(_ date: Date, calendar: Calendar = .current) -> String {
-        LocalDay(date, calendar: calendar).iso
-    }
-}

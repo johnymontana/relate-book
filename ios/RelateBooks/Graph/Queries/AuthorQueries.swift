@@ -4,8 +4,8 @@ import Relate
 /// one source (Open Library free text, or Wikidata ISO dates when only
 /// Wikidata knows the death), so a lifespan never mixes the two.
 enum AuthorQueries {
-    static func detail(key: String) -> Statement {
-        Statement("""
+    static func detail(key: String) throws -> Statement {
+        try Statement("""
             MATCH (a:Author {key: $key})
             RETURN a.key AS key, a.name AS name, a.url AS url, a.bio AS bio,
                    CASE WHEN a.death_date IS NULL AND a.wikidata_death_date IS NOT NULL
@@ -19,27 +19,27 @@ enum AuthorQueries {
                    [(a)-[:CITIZEN_OF]->(c:Country) | c.name] AS citizenOf,
                    [(a)-[r:WON]->(w:Award) | {name: w.name, year: r.year}] AS awards,
                    size([(a)<-[:WRITTEN_BY]-(b:Book) | b]) AS bookCount
-            """, ["key": .string(key)])
+            """, ["key": key])
     }
 
     /// The author's books on the list, newest first.
-    static func books(key: String) -> Statement {
-        Statement("""
+    static func books(key: String) throws -> Statement {
+        try Statement("""
             MATCH (b:Book)-[:WRITTEN_BY]->(:Author {key: $key})
             WITH DISTINCT b
             WITH b, b.first_publish_year AS sortKey
             \(LibraryQueries.summaryProjection())
             ORDER BY sortKey IS NULL, sortKey DESC, toLower(coalesce(b.title, b.key)), b.key
-            """, ["key": .string(key)])
+            """, ["key": key])
     }
 }
 
 extension GraphStore {
-    func authorDetail(key: String) throws -> AuthorDetail? {
-        try run(AuthorQueries.detail(key: key), label: "authorDetail").rowsView.first.map(AuthorDetail.init(row:))
+    func authorDetail(key: String) async throws -> AuthorDetail? {
+        try await read(AuthorQueries.detail(key: key)).rowsView.first.map(AuthorDetail.init(row:))
     }
 
-    func authorBooks(key: String) throws -> [BookSummary] {
-        try run(AuthorQueries.books(key: key), label: "authorBooks").rowsView.map(BookSummary.init(row:))
+    func authorBooks(key: String) async throws -> [BookSummary] {
+        try await read(AuthorQueries.books(key: key)).rowsView.map(BookSummary.init(row:))
     }
 }

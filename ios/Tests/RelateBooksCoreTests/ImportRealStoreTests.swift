@@ -46,7 +46,7 @@ struct ImportRealStoreTests {
         // Save (the statements of `saveImport`, timed), then geocode.
         let newPlaces = try await store.missingPlaceNames(draft.terms.places)
         #expect(newPlaces == ["North Atlantic Ocean", "Gloucester (Mass.)"])
-        let results = try await store.transaction(ImportQueries.saveStatements(draft, now: Date()), label: "saveImport")
+        let results = try await store.write(try ImportQueries.saveStatements(draft, now: Date()))
         #expect(results.first?.rowsView.first?.bool("created") == true)
         let saveMs = results.reduce(0) { $0 + $1.elapsedMs }
         let outcomes = await PlaceLocator(store: store, geocoder: StubPlaceGeocoder()).locate(newPlaces)
@@ -76,27 +76,27 @@ struct ImportRealStoreTests {
         let keys21 = titleKeys + [PerfectStorm.hailMary, "/works/OL59800W"]
         #expect(keys21.count == 21)
         let budget: [(String, Statement)] = [
-            ("import bookByISBN PHM", ImportQueries.bookByISBN(PerfectStorm.hailMaryISBN)),
-            ("import bookExists", ImportQueries.bookExists(key: PerfectStorm.key)),
-            ("import existingBooks 21", ImportQueries.existingBooks(keys: keys21)),
-            ("import existingAuthors 2", ImportQueries.existingAuthors(keys: [PerfectStorm.junger, PerfectStorm.collins])),
-            ("import missingPlaces 3", ImportQueries.missingPlaces(names: draft.terms.places)),
+            ("import bookByISBN PHM", try ImportQueries.bookByISBN(PerfectStorm.hailMaryISBN)),
+            ("import bookExists", try ImportQueries.bookExists(key: PerfectStorm.key)),
+            ("import existingBooks 21", try ImportQueries.existingBooks(keys: keys21)),
+            ("import existingAuthors 2", try ImportQueries.existingAuthors(keys: [PerfectStorm.junger, PerfectStorm.collins])),
+            ("import missingPlaces 3", try ImportQueries.missingPlaces(names: draft.terms.places)),
             ("import appFormatFacets", LibraryQueries.appFormatFacets),
             ("import formatFacets items", LibraryQueries.formatFacets),
-            ("import scanBook Perfect Storm", EmbeddingQueries.scanBook(key: PerfectStorm.key)),
-            ("import libraryPage [text=perfect storm]", LibraryQueries.page(filter: LibraryFilter(text: "perfect storm"), sort: .title, skip: 0)),
-            ("import detail Perfect Storm", BookQueries.detail(key: PerfectStorm.key)),
-            ("import hydrate 2 keys", SearchQueries.hydrate(keys: [PerfectStorm.key, PerfectStorm.hailMary], filter: SearchFilter(), limit: 50)),
+            ("import scanBook Perfect Storm", try EmbeddingQueries.scanBook(key: PerfectStorm.key)),
+            ("import libraryPage [text=perfect storm]", try LibraryQueries.page(filter: LibraryFilter(text: "perfect storm"), sort: .title, skip: 0)),
+            ("import detail Perfect Storm", try BookQueries.detail(key: PerfectStorm.key)),
+            ("import hydrate 2 keys", try SearchQueries.hydrate(keys: [PerfectStorm.key, PerfectStorm.hailMary], filter: SearchFilter(), limit: 50)),
             // The main list and search queries with an Item-less book in the store.
-            ("import libraryPage title p0", LibraryQueries.page(filter: LibraryFilter(), sort: .title, skip: 0)),
-            ("import libraryPage wishlist skip 1800", LibraryQueries.page(filter: LibraryFilter(), sort: .wishlist, skip: 1800)),
-            ("import libraryPage [format=Hardcover] p0", LibraryQueries.page(filter: LibraryFilter(format: "Hardcover"), sort: .title, skip: 0)),
-            ("import libraryCount [format=Paperback]", LibraryQueries.count(filter: LibraryFilter(format: "Paperback"))),
-            ("import bookText [perfect storm]", SearchQueries.bookText(KeywordQuery("perfect storm")!, limit: 50)),
+            ("import libraryPage title p0", try LibraryQueries.page(filter: LibraryFilter(), sort: .title, skip: 0)),
+            ("import libraryPage wishlist skip 1800", try LibraryQueries.page(filter: LibraryFilter(), sort: .wishlist, skip: 1800)),
+            ("import libraryPage [format=Hardcover] p0", try LibraryQueries.page(filter: LibraryFilter(format: "Hardcover"), sort: .title, skip: 0)),
+            ("import libraryCount [format=Paperback]", try LibraryQueries.count(filter: LibraryFilter(format: "Paperback"))),
+            ("import bookText [perfect storm]", try SearchQueries.bookText(KeywordQuery("perfect storm")!, limit: 50)),
         ]
         let geo: [(String, Statement)] = [
-            ("import nearestLabel Gloucester", ImportQueries.nearestLabel(GeoCoordinate(latitude: 42.6159, longitude: -70.6620), radiusMeters: 1000)),
-            ("import nearestLabel Pasadena", ImportQueries.nearestLabel(GeoCoordinate(latitude: 34.1477, longitude: -118.1442), radiusMeters: 1000)),
+            ("import nearestLabel Gloucester", try ImportQueries.nearestLabel(GeoCoordinate(latitude: 42.6159, longitude: -70.6620), radiusMeters: 1000)),
+            ("import nearestLabel Pasadena", try ImportQueries.nearestLabel(GeoCoordinate(latitude: 34.1477, longitude: -118.1442), radiusMeters: 1000)),
             ("import locatedLabels", ImportQueries.locatedLabels()),
         ]
         var measured: [PerfTests.Measurement] = []

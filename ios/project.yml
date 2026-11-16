@@ -6,9 +6,9 @@ options:
   createIntermediateGroups: true
   generateEmptyDirectories: true
 packages:
+  # The pinned source snapshot scripts/setup_relate.sh makes (see Package.swift).
   relate:
-    url: https://github.com/relatedb/relate
-    exactVersion: 1.0.1
+    path: Vendor/relate
 settings:
   base:
     SWIFT_VERSION: "6.0"

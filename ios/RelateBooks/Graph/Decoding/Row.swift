@@ -1,13 +1,20 @@
 import Foundation
 import Relate
 
-/// A read-only view over one result record (or one map inside a collected
+/// A read-only view over one result `Record` (or one map inside a collected
 /// list) with tolerant typed accessors. Queries return scalar columns and
 /// collected lists of maps; every model decodes through this.
+///
+/// Relate's own typed reads (`Record.get`, `decode`) are strict by design: a
+/// string is never parsed into a number and an empty string is not nil. The
+/// store this app reads was written by an importer whose values need both,
+/// so the tolerant rules live here, over the same values.
 struct Row: Sendable {
     let values: [String: CypherValue]
 
     init(_ values: [String: CypherValue]) { self.values = values }
+
+    init(_ record: Record) { self.values = record.dictionary }
 
     subscript(_ column: String) -> CypherValue { values[column] ?? .null }
 
@@ -86,11 +93,9 @@ struct Row: Sendable {
     func instant(_ column: String) -> Date? {
         switch self[column] {
         case .dateTime(let d):
-            return Row.gregorianUTC(year: d.year, month: d.month, day: d.day, hour: d.hour, minute: d.minute,
-                                    second: d.second, nanosecond: d.nanosecond, offsetSeconds: d.offsetSeconds)
+            return d.foundationDate
         case .localDateTime(let d):
-            return Row.gregorianUTC(year: d.year, month: d.month, day: d.day, hour: d.hour, minute: d.minute,
-                                    second: d.second, nanosecond: d.nanosecond, offsetSeconds: 0)
+            return d.foundationDate(in: .gmt)
         case .string(let s):
             let text = s.trimmingCharacters(in: .whitespaces)
             if let date = try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(text) { return date }
@@ -104,10 +109,9 @@ struct Row: Sendable {
     /// coordinate. For the geographic srids x is longitude and y latitude.
     /// Cartesian points, out-of-range values and non-points decode as nil.
     func point(_ column: String) -> GeoCoordinate? {
-        guard let p = self[column].pointValue, p.srid == 4326 || p.srid == 4979,
-              p.x.isFinite, p.y.isFinite,
-              (-90.0...90.0).contains(p.y), (-180.0...180.0).contains(p.x) else { return nil }
-        return GeoCoordinate(latitude: p.y, longitude: p.x)
+        guard let p = self[column].pointValue, let latitude = p.latitude, let longitude = p.longitude,
+              (-90.0...90.0).contains(latitude), (-180.0...180.0).contains(longitude) else { return nil }
+        return GeoCoordinate(latitude: latitude, longitude: longitude)
     }
 
     /// A calendar day: a DATE, or a "yyyy-MM-dd" string.
@@ -121,14 +125,13 @@ struct Row: Sendable {
             return nil
         }
     }
+}
 
-    private static func gregorianUTC(year: Int64, month: Int64, day: Int64, hour: Int64, minute: Int64,
-                                     second: Int64, nanosecond: Int64, offsetSeconds: Int64) -> Date? {
-        DateComponents(calendar: Calendar(identifier: .gregorian),
-                       timeZone: TimeZone(secondsFromGMT: Int(offsetSeconds)),
-                       year: Int(year), month: Int(month), day: Int(day),
-                       hour: Int(hour), minute: Int(minute), second: Int(second),
-                       nanosecond: Int(nanosecond)).date
+extension GeoCoordinate {
+    /// The WGS-84 point a statement binds for this coordinate. Throws
+    /// `RelateError.invalidParameter` for a coordinate off the globe.
+    func point() throws -> CypherValue.Point {
+        try CypherValue.Point(latitude: latitude, longitude: longitude)
     }
 }
 
@@ -147,27 +150,5 @@ enum ImageURLs {
 }
 
 extension QueryResult {
-    var rowsView: [Row] { records.map(Row.init) }
-}
-
-/// A parameterized Cypher statement. Query builders return these so tests
-/// can inspect the text, and `GraphStore.run` executes them.
-struct Statement: Sendable, Equatable {
-    let cypher: String
-    let parameters: [String: CypherValue]
-
-    init(_ cypher: String, _ parameters: [String: CypherValue] = [:]) {
-        self.cypher = cypher
-        self.parameters = parameters
-    }
-}
-
-extension GraphStore {
-    /// Runs a `Statement` and logs its engine-reported time.
-    @discardableResult
-    func run(_ statement: Statement, label: String = "query") throws -> QueryResult {
-        let result = try query(statement.cypher, statement.parameters)
-        Log.query.debug("\(label, privacy: .public): \(result.rows.count) rows in \(result.elapsedMs, format: .fixed(precision: 2)) ms")
-        return result
-    }
+    var rowsView: [Row] { map(Row.init) }
 }

@@ -27,14 +27,15 @@ struct Phase5MiscTests {
     @Test("save statements: W1, W2 only with authors, W3 only for non-empty lists")
     func saveStatements() throws {
         let draft = try PerfectStorm.draft()
-        let statements = ImportQueries.saveStatements(draft, now: Date(timeIntervalSince1970: 0))
+        let statements = try ImportQueries.saveStatements(draft, now: Date(timeIntervalSince1970: 0))
         #expect(statements.count == 4)
         #expect(statements[0].cypher.hasPrefix("MERGE (b:Book {key: $key})"))
         #expect(statements[2].cypher.contains("MERGE (t:Subject {name: name})") && statements[3].cypher.contains("[:SET_IN]"))
         #expect(statements.allSatisfy { !$0.cypher.contains("DELETE") })
-        #expect(statements[0].parameters["now"] == .string("1970-01-01T00:00:00.000Z"))
+        #expect(statements[0].parameters["now"] == .dateTime(.init(year: 1970, month: 1, day: 1, hour: 0, minute: 0, second: 0,
+                                                                   nanosecond: 0, offsetSeconds: 0, zone: nil)))
         let manual = try ImportDraft.manual(title: "T", authors: "", uuid: UUID())
-        #expect(ImportQueries.saveStatements(manual, now: Date()).count == 1)
+        #expect(try ImportQueries.saveStatements(manual, now: Date()).count == 1)
     }
 
     @Test("routes and notices")

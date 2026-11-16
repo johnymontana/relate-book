@@ -20,7 +20,8 @@ ios/                    Xcode project (xcodegen) + SwiftPM package RelateBooksCo
                         ScaledLibrary.swift grows the sample to 1,800 books for the perf suites)
   UITests/              XCUITest suite (simulator)
   docs/                 simulator screenshots per phase
-  scripts/              refresh_store.sh, convert_embedding_model.py (+ pinned requirements)
+  scripts/              setup_relate.sh (Relate at the pinned commit -> Vendor/relate, git-ignored),
+                        refresh_store.sh, convert_embedding_model.py (+ pinned requirements)
 web/                    Vite + React + TypeScript app: Relate WASM, NVL, WebLLM, transformers.js
   src/engine/           the engine worker, the dataset loader, the graph model (no React)
   src/queries/          Cypher per tab (no React); src/search/ and src/ai/ are logic, tested in Node
@@ -35,13 +36,19 @@ LICENSE, NOTICE         Apache-2.0; third-party material (model, sample data, sc
 
 ## External dependencies
 
-- **Relate** (embedded Cypher graph database, 1.0.1). `ios/Package.swift` and
-  `ios/project.yml` depend on the published Swift package
-  `https://github.com/relatedb/relate` at exactly 1.0.1; SwiftPM downloads the
-  checksum-pinned XCFramework (no environment variable; unset any stale
-  `RELATE_LOCAL_XCFRAMEWORK`). Commit both `Package.resolved` files. Change the
-  pin only as a deliberate upgrade: re-run every suite and re-check the engine
-  notes below.
+- **Relate** (embedded Cypher graph database). The extension, the bundled
+  store and the web app are on 1.0.1. The iOS app is on Relate's `main` at the
+  commit `ios/scripts/setup_relate.sh` pins (`af8c2e4`), because the Swift API
+  it uses (ADR-0596) is in no release yet. `ios/Package.swift` and
+  `ios/project.yml` depend on `ios/Vendor/relate` by path: a source snapshot
+  the script downloads (git-ignored, never committed) with an engine framework
+  it builds there (needs `rustup`; five release builds). Every `swift` and
+  `xcodebuild` command for `ios/` needs `RELATE_LOCAL_XCFRAMEWORK=1`; without
+  it package resolution fails on a release asset that does not exist. There is
+  no `Package.resolved` to commit while the dependency is a path. Change the
+  pinned commit only as a deliberate upgrade: re-run every suite and re-check
+  the engine notes below. When a release carries the API, go back to
+  `.package(url:exact:)` (steps in `ios/README.md`).
 - The **`relate` CLI** 1.0.1: `curl -sSfL https://relatedb.ai/install.sh | bash`,
   a release binary, or `cargo build --release --locked -p relate-cli` in a
   Relate checkout of tag `v1.0.1`. Check `relate --version` before trusting a
@@ -69,8 +76,10 @@ relate query --read-only -d ./copy.rl "MATCH (b:Book) RETURN count(b)"   # --par
 
 # iOS
 cd ios
+scripts/setup_relate.sh      # once, and after the pinned commit changes: fetches Relate, builds the engine framework
+export RELATE_LOCAL_XCFRAMEWORK=1   # for every swift and xcodebuild command below
 xcodegen generate            # after adding or removing files; commit project.yml AND the .xcodeproj
-swift test                   # core tests, macOS; expect "Test run with 266 tests in 35 suites passed"
+swift test                   # core tests, macOS; expect "Test run with 270 tests in 35 suites passed"
 xcodebuild -project RelateBooks.xcodeproj -scheme RelateBooks \
   -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/rb-dd build
 xcodebuild test -project RelateBooks.xcodeproj -scheme RelateBooks \
@@ -115,18 +124,32 @@ refresh it and both web suites together with the store. A personal export for
 the web app goes to `web/local/` (git-ignored, served only by the dev server)
 and nowhere else: never under `web/public/`, which is copied into every build.
 
-**Relate engine rule (LABS-1188, still present in 1.0.1).** Never create and
+**Relate engine rule (LABS-1188, still present in 1.0.1 and at the iOS pin).** Never create and
 then delete the same node inside one explicit transaction: the engine panics
 and poisons the connection. Deleting nodes that existed before the transaction
-is fine.
+is fine. Every write through `GraphStore` is an explicit transaction now, a
+single statement included.
 
 **Relate 1.0.1 engine changes the app depends on.** Upper-case `AND`/`OR`/`NOT`
 in a fulltext query string are operators (0.16.1 treated them as words), so
 fulltext `$text` must come from `KeywordQuery`. `point.withinBBox` now wraps
 the antimeridian; `GeoBox.split()` is kept regardless.
 
-**Swift 6 strict concurrency.** `Connection` is not `Sendable` and never leaves
-the `GraphStore` actor. View models are `@MainActor @Observable`. Views contain
+**Relate `main` (the iOS pin) behaviour the app depends on.** A statement that
+contains a `CALL { }` subquery is reported as read-write whatever it does, and
+a managed read refuses it: run such a statement through
+`GraphStore.readWithSubquery`, never `read`. A raw fulltext query string that
+ends in a backslash is a syntax error (1.0.1 accepted it); `KeywordQuery`
+never produces one.
+
+**Swift 6 strict concurrency.** `GraphStore` is a `Sendable` struct around one
+Relate `Database`, which owns the connections (one writer, pooled readers); the
+app never holds a `Connection`. A query method is `async` and runs its
+statement with `read` or `write`; statements that must see the same snapshot,
+or a check and the write that depends on it, share one `database.read { }` or
+`database.write { }` body, because two awaited calls can interleave with other
+work. A `read` refuses a statement that writes. View models are
+`@MainActor @Observable`. Views contain
 no Cypher; query files (`Graph/Queries/*`) contain no SwiftUI. New UI-only
 folders go under `Features/`; anything else under `RelateBooks/` is compiled
 by `swift test` on macOS too and must build there. A new top-level UI-only
@@ -146,8 +169,17 @@ check both have to pass before it runs (Relate WASM has no per-statement
 read-only mode). Do not add a path that runs model output any other way. The
 Query tab's own editor is the user's and may write.
 
-**Timestamps.** Swift passes ISO-8601 strings and statements use
-`datetime($now)` / `date($today)`. Never call argument-less `date()` or
+**Statements.** Query builders return `Relate.Statement` with named
+parameters and Swift values (`try Statement("… $key …", ["key": key])`), so
+they `throw`. A one-argument `Statement("…\(x)…")` is a statement literal that
+binds `\(x)` as a parameter: splice program text with `\(raw:)` and labels
+with `\(identifier:)`, or pass a parameter dictionary, which makes the text a
+plain string. A vector is bound with `CypherValue(vector:)` (a bare `[Float]`
+is a list), a coordinate with `GeoCoordinate.point()`.
+
+**Timestamps.** Statements bind a `Foundation.Date` for an instant (stored as a
+UTC DATETIME) and `CypherValue.Date(date, in: timeZone)` for the user's
+calendar day (a DATE). Never call argument-less `date()` or
 `datetime()` in app Cypher (the engine clock is UTC).
 
 **Writes.** All user-data writes go through `UserDataController`; every write is
@@ -196,7 +228,10 @@ and `playwright-report/` are ignored; commit `package-lock.json`.
 
 Phases 0 to 5 of the iOS plan are implemented (browse, reading status/tags/notes,
 on-device semantic search, map, adding books). Phase 6 (offline covers,
-importing a newer `.rl`, export, share) is pending. The web app (overview
+importing a newer `.rl`, export, share) is pending. Since 2026-11-15 the iOS
+app is written against Relate's unreleased Swift API and built from a pinned
+source snapshot; moving back to a published package is a small change once a
+release carries it. The web app (overview
 charts, library with hybrid search, NVL graph explorer, Cypher console,
 text-to-Cypher and the chat agent) is implemented; it is read-mostly and has
 none of the iOS app's user data (status, tags, notes). The Google Books and

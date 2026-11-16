@@ -41,25 +41,59 @@ struct GraphStoreTests {
         }
     }
 
-    @Test("provision removes temp copies left by an interrupted earlier copy")
-    func staleTempCopiesRemoved() async throws {
+    @Test("bootstrap leaves only the store beside the seed, owner-writable, and no temporary copy")
+    func provisionedCopy() async throws {
         let dir = try Fixtures.tempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
         let bundled = dir.appendingPathComponent("books.rl")
-        let target = dir.appendingPathComponent("library.rl")
+        let support = dir.appendingPathComponent("Support", isDirectory: true)
+        let target = support.appendingPathComponent("library.rl")
         try Fixtures.makeFixtureStore(at: bundled)
-        let stale = dir.appendingPathComponent(".library.rl.\(UUID().uuidString).tmp")
-        let unrelated = dir.appendingPathComponent(".other.rl.\(UUID().uuidString).tmp")
-        try Data("partial".utf8).write(to: stale)
-        try Data("keep".utf8).write(to: unrelated)
+        // A read-only seed, as in an app bundle.
+        try FileManager.default.setAttributes([.posixPermissions: 0o444], ofItemAtPath: bundled.path)
 
-        #expect(try GraphStore.provision(from: bundled, to: target))
-        #expect(!FileManager.default.fileExists(atPath: stale.path))
-        #expect(FileManager.default.fileExists(atPath: unrelated.path))
-        #expect(FileManager.default.fileExists(atPath: target.path))
-        let leftovers = try FileManager.default.contentsOfDirectory(atPath: dir.path)
-            .filter { $0.hasPrefix(".library.rl.") }
+        do {
+            let store = try await GraphStore.bootstrap(bundledStore: bundled, storeURL: target)
+            try await store.query("CREATE (:AppMeta {key: 'marker'})")
+        }
+        let permissions = try FileManager.default.attributesOfItem(atPath: target.path)[.posixPermissions] as? Int
+        #expect(permissions == 0o600)
+        let leftovers = try FileManager.default.contentsOfDirectory(atPath: support.path)
+            .filter { $0.hasSuffix(".provisioning") || $0.hasSuffix(".tmp") }
         #expect(leftovers.isEmpty)
+    }
+
+    @Test("a read never keeps a write, and a write statement sent as a read is refused")
+    func readsAreReadOnly() async throws {
+        let store = try await GraphStore.inMemory()
+        try await Fixtures.insertBooks(into: store)
+        await #expect(throws: RelateError.self) {
+            _ = try await store.read(Statement("MATCH (b:Book) SET b.title = 'changed' RETURN count(b) AS c"))
+        }
+        #expect(try await store.countOf("MATCH (b:Book) WHERE b.title = 'changed' RETURN count(b)") == 0)
+        #expect(try await store.bookCount() == 3)
+    }
+
+    @Test("reads run while a write transaction is open, and see the write only after it commits")
+    func readsDoNotWaitForAWrite() async throws {
+        let store = try await GraphStore.inMemory()
+        try await Fixtures.insertBooks(into: store)
+        let entered = DispatchSemaphore(value: 0)
+        let release = DispatchSemaphore(value: 0)
+        let write = Task {
+            try await store.database.write { tx in
+                try tx.run("CREATE (:Book {key: '/works/OL4W', title: 'Quince Jam'})")
+                entered.signal()
+                release.wait()
+            }
+        }
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global().async { entered.wait(); continuation.resume() }
+        }
+        #expect(try await store.bookCount() == 3)
+        release.signal()
+        try await write.value
+        #expect(try await store.bookCount() == 4)
     }
 
     @Test("a runtime statement error leaves the connection usable")
