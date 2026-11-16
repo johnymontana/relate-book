@@ -165,9 +165,27 @@ struct PerfTests {
         return list
     }
 
+    // MARK: Graph features (connections, Next up)
+
+    /// The two-hop connection reads and the Next up reads. On the scaled
+    /// store every shared subject, award and series is on about 300 books,
+    /// so these time the degree check that keeps such hubs from being
+    /// expanded (`ConnectionQueries.defaultMaxDegree`), which is the cost a
+    /// real list pays per shared node.
+    static func graphStatements(hydrateKeys: [String]) throws -> [(String, Statement)] {
+        [
+            ("related 5 seeds", try ConnectionQueries.related(seeds: Array(hydrateKeys.prefix(5)), limit: 10)),
+            ("readingLinks 50 keys", try ConnectionQueries.reading(keys: Array(hydrateKeys.prefix(50)))),
+            ("connections to Left Hand, 10 keys", try ConnectionQueries.between(anchor: leftHand, keys: Array(hydrateKeys.prefix(10)))),
+            ("nextUp series", try NextUpQueries.series(limit: 20)),
+            ("nextUp authors", try NextUpQueries.authors(minRating: 4, perAuthor: 3, limit: 20)),
+            ("nextUp awards", try NextUpQueries.awards(minRating: 4, limit: 10)),
+        ]
+    }
+
     // MARK: Phase 4 (the geocoded store)
 
-    /// The 16 place statements, all under `placeBudgetMs`.
+    /// The 17 place statements, all under `placeBudgetMs`.
     static func placeStatements() throws -> [(String, Statement)]  {
         let antimeridian = GeoBox(south: -30, west: 170, north: 0, east: -160).split()
         var list: [(String, Statement)] = [
@@ -190,6 +208,7 @@ struct PerfTests {
             ("placeResolve San Francisco", try PlaceQueries.resolve("San Francisco")),
             ("placeLocation San Francisco", try PlaceQueries.location(name: "San Francisco")),
             ("placesNear Missoula 500 km", try PlaceQueries.nearMe(GeoCoordinate(latitude: 46.87, longitude: -113.99), radiusMeters: 500_000)),
+            ("nearReading 250 km", try NextUpQueries.nearReading(radiusMeters: 250_000, perPlace: 3, limit: 30)),
         ]
         return list
     }
@@ -328,7 +347,7 @@ struct PerfTests {
 
         var results: [Measurement] = []
         for (name, statement) in try Self.statements() + Self.userDataStatements(noteID: noteID)
-            + Self.searchStatements(seed: seed, hydrateKeys: hydrateKeys) {
+            + Self.searchStatements(seed: seed, hydrateKeys: hydrateKeys) + Self.graphStatements(hydrateKeys: hydrateKeys) {
             results.append(try await Self.measure(store, name, statement))
         }
         var placeResults: [Measurement] = []

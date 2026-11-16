@@ -18,6 +18,10 @@ struct AppSession {
     let search: SearchModel
     /// The Map tab (phase 4).
     let map: MapModel
+    /// The Map tab's "Near your reading" list.
+    let nearReading: NearReadingModel
+    /// The Library's "Next up" screen.
+    let nextUp: NextUpModel
     /// Phase 5: the anonymous Open Library client (one gate for the app).
     let openLibrary: OpenLibraryClient
     let importer: BookImporter
@@ -44,6 +48,8 @@ struct AppSession {
         self.searchService = service
         self.search = SearchModel(service: service, userData: controller)
         self.map = MapModel(store: store, userData: controller)
+        self.nearReading = NearReadingModel(store: store, userData: controller)
+        self.nextUp = NextUpModel(store: store, userData: controller)
         let client = openLibrary ?? OpenLibraryClient(transport: URLSessionTransport())
         self.openLibrary = client
         self.importer = BookImporter(client: client, store: store)

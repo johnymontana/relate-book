@@ -11,6 +11,11 @@ Relate Books is a SwiftUI iPhone app. It bundles a `books.rl` graph store export
 - **Map tab (phase 4).** An `MKMapView` of the places books are set in: one pin per place label (every heading that geocoded to the same place, e.g. United States / USA / États-Unis, shares one pin), coloured by book count and clustered with summed book counts. A **Birthplaces** toggle adds the places authors were born in as a second layer (purple, clustered separately). Tapping a pin opens the **place sheet**: the label, "N books", "N authors born here", the headings filed under it ("Also filed as: …"), the books set there (title order, paged; a row pushes Book detail inside the sheet) and the authors born there. A **place search** field at the top finds a label or heading as you type (2+ characters) and flies to it. A capsule at the bottom says how many places are in view ("3 places in view").
 - **Add books (phase 5).** A **+** button on the Library opens **Add Book** with a Search / Scan / Manual control. **Search** queries Open Library as you type (3+ letters) and shows covers, titles, authors and first years; a work already in the store is badged **In your library** and opens at once, any other asks "Add “…”?" first. **Scan** reads an ISBN barcode with the camera (VisionKit) and always offers a typed ISBN field with check-digit validation. **Manual** saves a title and authors with no lookup. The import shows its steps ("Checking your library…", "Looking up…", "Saving…", "Locating places… 1 of 2", "Indexing…") and ends on the book's detail with "Added to your library" (or "Already in your library" for a book you have). App-added books show an **Added in app** section (date, how it was added, ISBN, publisher and year) where wishlist books show the Amazon price, and "Added in app" in list rows. New places the import creates are geocoded on device, so the book reaches the Map, and the book is embedded within seconds for semantic search.
 - **Term pages.** One generic `TermBooksView` covers subjects, genres, series (in series order), places, people, eras, publishers, awards and countries. Places, countries and awards also list linked authors. A place page has **Show on map** (switches to the Map tab, flies there and opens the sheet), or says why the place has no pin ("Not on the map: fictional or not a real place" / "Not on the map: location unknown").
+- **Graph features.** Four things the graph does that neither the lists nor the vectors do alone (details in [Graph features](#graph-features)):
+  - **Graph-expanded search.** The top search hits pull in their neighbours: the rest of a series, the author's other books, books that share an award or a rare subject, place, person or era. A result found only this way says why ("Same series as The Left Hand of Darkness").
+  - **Reasons.** A search row names the book's strongest link to something you have read or rated ("Shares “American Science fiction” with The Left Hand of Darkness, which you rated 5"). Book detail lists up to three such links, each to a different book, under **Connected to your reading**, and each **More like this** card says what it shares with the book on screen.
+  - **Next Up.** A sparkles button on the Library opens a screen with series you have started (the next unread book, by position), unread books by authors you rated 4 or 5, and unread award winners.
+  - **Near your reading.** A book button on the Map lists unread books set where a book you read is set, or within 250 km of it; choosing one flies the map there.
 
 The full roadmap is in [`../docs/ios-app-plan.md`](../docs/ios-app-plan.md).
 
@@ -41,20 +46,29 @@ xcodebuild -project RelateBooks.xcodeproj -scheme RelateBooks \
   -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/rb-dd build
 ```
 
-- `swift test` should end with `Test run with 270 tests in 35 suites passed` (phase 5 was 266 in 35). An extra XCTest line, "Executed 0 tests", is normal. Parameterized tests count once.
-- The **perf suite** (`PerfTests.swift`) bootstraps a temp copy of `RelateBooks/Resources/books.rl`, grows it to 1,800 books with `ScaledLibrary` (300 copies of the six sample books, authors and editions under distinct keys; shared subjects, awards and other terms; the first 30 copies also clone the places at shifted coordinates, for 570 located places and 510 map labels), and runs 187 library, detail, term, user-data, search and place queries, including the recently-updated sort and the tag filter. The perf store is seeded with statuses on 300 books, a 200-book tag, a 3-book tag, random unit 384-d vectors on 400–402 books and 60 embedded notes. The real model never runs in PerfTests. Current lines (2026-11-15, Relate `main` at the pinned commit, scaled sample, median of 5 warm runs, this Mac; the 2026-11-12 run on 1.0.1 had a slowest median of 22.31 ms):
+- `swift test` should end with `Test run with 293 tests in 40 suites passed` (phase 5 was 266 in 35; the move to the new Relate API made it 270). An extra XCTest line, "Executed 0 tests", is normal. Parameterized tests count once.
+- The **perf suite** (`PerfTests.swift`) bootstraps a temp copy of `RelateBooks/Resources/books.rl`, grows it to 1,800 books with `ScaledLibrary` (300 copies of the six sample books, authors and editions under distinct keys; shared subjects, awards and other terms; the first 30 copies also clone the places at shifted coordinates, for 570 located places and 510 map labels), and runs 194 library, detail, term, user-data, search, graph and place queries, including the recently-updated sort and the tag filter. The perf store is seeded with statuses on 300 books, a 200-book tag, a 3-book tag, random unit 384-d vectors on 400–402 books and 60 embedded notes. The real model never runs in PerfTests. Current lines (2026-11-15, Relate `main` at the pinned commit, scaled sample, median of 5 warm runs, this Mac; the 2026-11-12 run on 1.0.1 had 187 queries and a slowest median of 22.31 ms):
 
   ```
   PERF places: 570 located, 510 world pins
-  PERF semantic top50: cold 3.92 ms, median 3.63 ms, max 3.72 ms, rows 50
-  PERF bookText [lonely astronaut saves earth]: cold 23.74 ms, median 22.48 ms, max 22.67 ms, rows 50
-  PERF moreLikeThis Project Hail Mary: cold 4.12 ms, median 3.82 ms, max 3.90 ms, rows 10
-  PERF placeRegion world: cold 10.75 ms, median 10.26 ms, max 10.37 ms, rows 510
-  PERF placeBooks San Francisco p0: cold 2.08 ms, median 1.93 ms, max 1.95 ms, rows 40
-  PERF placeAuthors New York City: cold 1.66 ms, median 1.44 ms, max 1.60 ms, rows 271
-  PERF summary: 187 queries; slowest median 22.48 ms (bookText [lonely astronaut saves earth])
-  PERF import summary: 19 queries; slowest median 22.70 ms (import bookText [perfect storm])
+  PERF semantic top50: cold 3.85 ms, median 3.59 ms, max 3.60 ms, rows 50
+  PERF bookText [lonely astronaut saves earth]: cold 22.61 ms, median 21.85 ms, max 22.08 ms, rows 50
+  PERF moreLikeThis Project Hail Mary: cold 4.22 ms, median 3.99 ms, max 4.18 ms, rows 10
+  PERF related 5 seeds: cold 2.85 ms, median 2.55 ms, max 2.64 ms, rows 0
+  PERF readingLinks 50 keys: cold 11.62 ms, median 11.47 ms, max 11.94 ms, rows 0
+  PERF connections to Left Hand, 10 keys: cold 5.06 ms, median 4.75 ms, max 4.98 ms, rows 0
+  PERF nextUp series: cold 1.61 ms, median 1.40 ms, max 1.52 ms, rows 1
+  PERF nextUp authors: cold 0.26 ms, median 0.20 ms, max 0.21 ms, rows 0
+  PERF nextUp awards: cold 8.17 ms, median 7.98 ms, max 8.14 ms, rows 10
+  PERF placeRegion world: cold 10.77 ms, median 10.47 ms, max 10.79 ms, rows 510
+  PERF placeBooks San Francisco p0: cold 2.11 ms, median 1.99 ms, max 2.04 ms, rows 40
+  PERF placeAuthors New York City: cold 1.68 ms, median 1.40 ms, max 1.40 ms, rows 271
+  PERF nearReading 250 km: cold 8.62 ms, median 8.44 ms, max 8.63 ms, rows 5
+  PERF summary: 194 queries; slowest median 21.94 ms (bookText [le guin])
+  PERF import summary: 19 queries; slowest median 23.00 ms (import bookText [perfect storm])
   ```
+
+  The three connection lines return no rows here on purpose: on the scaled store every shared subject, award and series is on hundreds of books, so they time the degree check that keeps hubs from being expanded. On a temporary copy of a real 1,811-book list (151 books marked read), the same statements took 3.4 ms (related, 5 seeds, 10 rows), 13 ms (reasons for 50 books), 0.5 ms (connections to one book), about 2 ms for the three Next Up statements together and 5 ms for near-your-reading. Those were measured before the weight floor, the noise rules and the place cap were added, which only remove work.
 
   These are engine-reported statement times. Every write now runs inside a transaction, and the write lines are far lower than a statement that commits itself would be (`writeBooks 32 rows` reads 0.37 ms), so they most likely no longer include the commit; that was not isolated. What a screen waits for is the wall-clock time of the call, which the reader pool changes: on the same scaled store, the first library page took 4.1 ms (median) with nothing else running, and 4.5 ms median, 7.5 ms at the 95th percentile and 9 ms at worst while the indexer embedded all 1,800 books with the instant test embedder. Before the migration (one connection behind an actor, Relate 1.0.1) the same measurement gave 5.0 ms idle and 11 ms median, 15 ms at the 95th percentile and about 470 ms at worst during indexing. Three runs each, about 300 and 125 page reads during indexing; a one-off test, not part of the suite.
 
@@ -114,7 +128,7 @@ xcodebuild -project RelateBooks.xcodeproj -scheme RelateBooks \
 
   `EmbedderTests` prints the real MiniLM time per text on the Mac (`MINILM per-text median 2.23 ms, p90 3.16 ms (all)` and `3.84 ms, p90 4.20 ms (cpuOnly)`). Model load takes 66–93 ms with `.all` (warm Neural Engine cache) and 37–53 ms with `.cpuOnly`. `HeavyTestGate` stops the perf and Core ML suites from running at the same time. It asserts that each query's engine-reported `elapsedMs` (median of 5 warm runs) is under 50 ms, and prints one `PERF <query>: cold … median … max … rows …` line per query. To see only those lines: `swift test --filter PerfTests 2>&1 | grep PERF`.
 - Always pass an **absolute** `-derivedDataPath`.
-- **UI tests** (target `RelateBooksUITests`, 12 tests) drive the app on a simulator. Classes run in alphabetical order: AddBook, ChipNavigation, Map, Search, then UserData. `TEST_RUNNER_SCREENSHOT_DIR` saves each screen as a PNG, through the shared `saveScreenshot` helper in `UITests/Screenshots.swift`.
+- **UI tests** (target `RelateBooksUITests`, 14 tests) drive the app on a simulator. Classes run in alphabetical order: AddBook, ChipNavigation, GraphFeatures, Map, Search, then UserData. `TEST_RUNNER_SCREENSHOT_DIR` saves each screen as a PNG, through the shared `saveScreenshot` helper in `UITests/Screenshots.swift`.
   - `AddBookUITests` (phase 5; 5 tests, run first). Every test launches with `--reset-user-data --stub-network`, so the add flow uses canned Open Library responses for The Perfect Storm (ISBN 9780393337013) and a stub geocoder: no test depends on openlibrary.org, Apple's geocoder or the camera. Covers still load from covers.openlibrary.org when the Mac has network; no assertion depends on them.
     - `testAlreadyInLibraryOpensExistingBook`: Scan mode shows `addBook.scanner.unavailable` on the simulator; typing 9780593135211 (the sample's Kindle edition) reads "Valid ISBN-13"; Look Up opens Project Hail Mary with "Already in your library" and its Amazon item (a local ISBN match, no request) (`phase5-already.png`).
     - `testManualEntry`: Manual mode, "Field Notes from the Bitterroot" by "Jane Doe, Rana Foroohar" → detail with "Added to your library", Added in app "… · entered manually" and both authors (`phase5-manual.png`); the Library search "bitterroot" lists it with "Added in app".
@@ -137,11 +151,12 @@ xcodebuild -project RelateBooks.xcodeproj -scheme RelateBooks \
     5. It relaunches without resets, waits up to 90 s, and asserts "0 embedded this launch" with no banner (`PHASE3_RELAUNCH_STATUS=…`).
 
     It writes no user data. The whole test takes about a minute with the sample (3–4 minutes on the 1,811-book export). For a literal fresh install, run `xcrun simctl uninstall <udid> com.johnymontana.RelateBooks` first.
+  - `GraphFeaturesUITests` (2 tests). `testNearYourReadingSheet` launches with `--reset-user-data --open-tab map`, opens the sheet from `map.nearReading` and finds its explanation of the empty list (`graph-near-reading.png`); the sample has no two books set near each other, so the list itself is covered by the core tests. `testNextUpConnectionsAndSearchReasons` opens Next Up from the Library (`graph-next-up.png`: the two award winners), marks The Left Hand of Darkness read with 5 stars and sees it leave the list; relaunches on Red Mars and finds "Connected to your reading" naming the shared subject and the rating, which opens the rated book (`graph-connected.png`); then searches "left hand darkness" and finds a row with the same reason (`graph-search.png`). It leaves that status and rating behind; Search and UserData start with a reset.
   - `UserDataUITests.testLibrarySwipeSetsStatus` launches with `--reset-user-data`, searches for the book and swipes its row to Reading (`phase2-swipe.png`).
   - `UserDataUITests.testUserDataSurvivesRelaunch` launches with `--reset-user-data --open-book /works/OL59800W`. It sets Read, gives 4 stars, creates the tag "Favorites" and adds a note. It then relaunches **without** the reset flag and checks that all of it is still shown (`phase2-book-detail.png`). Finally it relaunches with `--open-tab tags`, finds "Favorites (1)" (`phase2-tags.png`), and filters the Library by that tag (`phase2-library-tag.png`).
   - Only The Left Hand of Darkness is touched, so after a run it is the only book with user data in the simulator's `library.rl`, and no app-added book is left (the typed-ISBN test ends with a reset).
 
-  Run them (about 7 minutes with the sample: 12 tests in 412.9 s on 2026-11-12):
+  Run them (about 8 minutes with the sample: 14 tests in 471.4 s on 2026-11-15):
 
   ```sh
   TEST_RUNNER_SCREENSHOT_DIR=/abs/shots xcodebuild -project RelateBooks.xcodeproj -scheme RelateBooks \
@@ -198,6 +213,7 @@ The app pushes screens on launch, for testing and screenshots. Arguments go afte
 | `--open-book <key>` | Book detail, e.g. `--open-book /works/OL59800W` (The Left Hand of Darkness) or `--open-book amazon:B0GNZ8ZYPG` |
 | `--open-author <key>` | Author page, e.g. `--open-author /authors/OL31353A` (Ursula K. Le Guin) |
 | `--open-term <kind>=<name>` | Term page. `kind` is one of subject, genre, series, place, person, era, publisher, award, country. Example: `--open-term "series=Hainish Cycle"` |
+| `--open-next-up` | The Next Up screen. |
 | `--open-tab <library\|tags\|search\|map>` | Selects the first tab (no push). Example: `--open-tab search`, `--open-tab map` |
 | `--map-place "<label or heading>"` | Phase 4. Selects Map (unless `--open-tab` chose another tab; it wins over `--search`), then flies to that place and opens its sheet, once, on first appear. Matches a `geocoded_label` or a heading, case-insensitively: `--map-place Montana`, `--map-place USA` (→ United States), `--map-place "Los Angeles (Calif.)"` (→ Los Angeles). A place with no pin shows the banner "“Gethen” is not on the map". |
 | `--search "<text>"` | Selects Search (unless `--open-tab` chose another tab), prefills the field and runs the query. Like any query, it runs again when indexing completes. |
@@ -211,8 +227,13 @@ You can pass several; the routes are pushed in order on top of the Library, whic
 
 ### Screenshots
 
-All screenshots in `docs/` are written by the UI tests (`TEST_RUNNER_SCREENSHOT_DIR`, see Build) on the bundled six-book sample. They were regenerated on 2026-11-12 (iPhone 17, iOS 26.5, relate 1.0.1, fresh install). The earlier hand-taken phase 0/1 screens and the phase 5 live-network check showed the original export and were removed; their descriptions remain in the plan's changelog.
+All screenshots in `docs/` are written by the UI tests (`TEST_RUNNER_SCREENSHOT_DIR`, see Build) on the bundled six-book sample. They were regenerated on 2026-11-15 (iPhone 17, iOS 26.4, Relate `main` at the pinned commit, fresh install), so they show the Library's Next Up button and the Map's near-your-reading button. The earlier hand-taken phase 0/1 screens and the phase 5 live-network check showed the original export and were removed; their descriptions remain in the plan's changelog.
 
+- Graph features (`GraphFeaturesUITests`):
+  - [`graph-next-up.png`](docs/graph-next-up.png): Next Up on the untouched sample, with the two award winners.
+  - [`graph-connected.png`](docs/graph-connected.png): Red Mars, "Connected to your reading", after The Left Hand of Darkness was rated 5.
+  - [`graph-search.png`](docs/graph-search.png): "left hand darkness". Red Mars is second: the vectors put it last (cosine 0.08), the graph lifts it, and the row says what it shares with the rated book.
+  - [`graph-near-reading.png`](docs/graph-near-reading.png): the Map's Near Your Reading sheet with nothing read yet.
 - Phase 1 (`ChipNavigationUITests`): [`phase1-chip-genre.png`](docs/phase1-chip-genre.png), the "science fiction" genre page opened from The Left Hand of Darkness (Project Hail Mary and The Left Hand of Darkness), and [`phase1-chip-place.png`](docs/phase1-chip-place.png), the Gethen place page with "Not on the map: fictional or not a real place".
 - Phase 2 (`UserDataUITests`):
   - [`phase2-book-detail.png`](docs/phase2-book-detail.png): The Left Hand of Darkness after a relaunch, with Read, the finished date, 4 stars, the Favorites tag chip and the note.
@@ -309,13 +330,15 @@ Phase 5. Code: `RelateBooks/OpenLibrary/` (client, models, ISBN, draft, importer
 
 ## Search pipeline
 
-`SearchService.search` builds three candidate lists:
+`SearchService.search` builds four candidate lists (the fourth, the graph neighbours of the top hits, is described under [Graph features](#graph-features)):
 
 1. **Vector.** The query is embedded on device, then top-50 on `book_embedding`.
 2. **Keyword.** `book_text` top-50 plus `item_text` top-50 (item title and byline), mapped to Book. A book stays in the list only if it contains **every** sanitized query term (the keyword gate).
 3. **Notes.** Top-20 on `note_embedding`, mapped to the owning Book, keeping notes with cosine ≥ 0.30.
 
-The lists are fused with reciprocal rank fusion: k = 60, equal weights, with ties going to a keyword title or author match. The result's reason is note if a note matched, else "both", else semantic or keyword. The status and tag filters are applied after fusion, in the hydrate query, which also joins authors and the cover. Up to 50 results.
+4. **Related.** Up to 10 graph neighbours of the top 5 hits of the first three lists, ranked from position 6.
+
+The lists are fused with reciprocal rank fusion: k = 60, equal weights, with ties going to a keyword title or author match. The result's reason is note if a note matched, else "both", else semantic or keyword, and "related" only when the graph is the sole source. The status and tag filters are applied after fusion, in the hydrate query, which also joins authors and the cover. Up to 50 results.
 
 - Relate's SEARCH score for cosine is `(1 + cos) / 2`. Swift reports `cos = 2·score − 1`, so "Semantic 0.59" is a cosine.
 - **Why the gate.** Relate 0.16.1 fulltext ORs the lowercase terms and scores by raw term frequency. Without the gate, plain RRF put five "Earth" titles ahead of Project Hail Mary for the acceptance query.
@@ -324,6 +347,32 @@ The lists are fused with reciprocal rank fusion: k = 60, equal weights, with tie
 - **More like this** is one statement that uses the book's stored vector as the `FOR` expression (`MATCH (s:Book {key:$key}) WITH s, s.embedding AS q MATCH (b:Book) SEARCH b IN (VECTOR INDEX book_embedding FOR q LIMIT $probe) SCORE AS score WHERE b <> s …`). It returns the top 10 and excludes the seed. A book that is not embedded yet gives an empty list, and the section says "Similar books appear once indexing finishes".
 - **While indexing**, search uses whatever is embedded plus the keyword list, and the results header says "Semantic results cover 412 of 1,811 books so far".
 - **Without a model** (missing resource or load failure), search is keyword only and the tab says so.
+
+## Graph features
+
+All four are multi-hop reads over the same graph the lists use; the statements are in `Graph/Queries/ConnectionQueries.swift` and `NextUpQueries.swift`, and run as managed reads.
+
+**Connections.** Two books are connected when they point at the same node with the same relationship: `(book)-[rel]->(shared)<-[rel]-(other)`. `ConnectionKind` lists the seven kinds and how much each counts before rarity: series 4, author 3, award 2, person 1.5, place and subject 1, era 0.5. Genres are left out (a handful of nodes on most of the list).
+
+- **Rarity.** A link weighs `strength / degree`, the degree being the number of books on the shared node. A node on more than 50 books links nothing and is never expanded. A subject, place, person or era on more than a third of the library links nothing either, unless it is on exactly two books; series, authors and awards are exempt. On the full 1,811-book list the absolute cap is the one that bites (16 subjects and one place are above it, "Fiction" at 303 books); on the six-book sample the relative one is.
+- **Noise.** Subjects that are machine tags (`nyt:…`, `award:…=…`) or catalogue bookkeeping (`ConnectionQueries.noiseSubjects`: the embedding text's stoplist plus headings such as "Romans, nouvelles" and "Fiction, general") never link.
+- **Cost.** The degree is counted once per shared node, not once per book that uses it. The perf suite's scaled store, where every subject is on 300 to 1,200 books, is the worst case for that count.
+
+**Graph-expanded search.** After the semantic, keyword and note lists are fused, the top 5 hits that are confident (a keyword or note hit, or a vector hit with cosine ≥ 0.35) are seeds. `ConnectionQueries.related` returns their neighbours with summed link weights; a link from the n-th seed counts `1/n`, seeds themselves are not returned, and neighbours lighter than 0.05 are dropped. Up to 10 neighbours join the fusion as a fourth list whose ranks start at 6, so a book found only through the graph never outranks the hits it was reached from, and one that the vectors also found is lifted. Every knob is in `SearchTuning` (`relatedSeeds: 0` turns it off).
+
+**Reasons.** `ConnectionQueries.reading` finds, for a list of books, each one's strongest link to a book that is read, being read, or rated 4 or more; a rating scales the link by up to two (a 5 doubles it). Links lighter than 0.1 are not reasons, which in practice means a subject shared by at most ten books, or twenty when the other book is rated 5. Two books that share several nodes are one reason, named by the strongest. Search attaches one reason per row; Book detail shows up to three, each to a different book. `ConnectionQueries.between` explains the "More like this" cards relative to the book on screen. On a temporary copy of the full list with 151 books marked read and 38 of them rated, 106 of 200 unread books had a reason (90 by subject, 11 by author, 5 by place).
+
+**Next Up** (`GraphStore.nextUp`, three statements and the book rows in one snapshot):
+
+- **Continue a series.** Series with at least one read book and an unread one; the unread book with the lowest position is "next" (positions are strings such as "4" or "1.5"; one that is not a number sorts last). A book you are reading is not suggested.
+- **More by an author.** Authors of a book you rated 4 or 5, with their unread, unrated books (three shown, by title).
+- **Award winners you haven't read.** Books that won an award which one of your 4- or 5-star books also won come first, then the most awarded.
+
+The screen reloads when you come back to it after a status or rating changed.
+
+**Near your reading** (`GraphStore.placesNearReading`). From each place a read book is set in, the located places within 250 km (that place itself included, at 0 km) that have unread books, nearest first, one row per map label. A place heading on more than 25 books is neither an origin nor a destination: "United States" is on 173 books of the full list and its point is the middle of the country.
+
+**What the six-book sample shows.** It has one series with one book and no two authors in common, so Next Up shows only the award winners, graph expansion finds one pair (Red Mars and The Left Hand of Darkness share "American Science fiction"), and Near your reading stays empty. The core tests use small fixtures that have every kind of link.
 
 ## Open in Xcode
 
@@ -355,7 +404,7 @@ ios/
                                 Search/ (SearchView, SearchResultRow, IndexingBanner),
                                 Map/ (MapScreen, PlaceMapView + PlaceAnnotation/PlaceMarkerView/PlaceClusterView,
                                       PlaceSheet, PinTier+Color, ShowOnMapAction),
-                                BookDetail/MoreLikeThisSection,
+                                BookDetail/MoreLikeThisSection, NextUp/NextUpView, Map/NearReadingSheet,
                                 AddBook/ (AddBookView + search/scan/manual sections, ImportProgressView, ISBNScannerView),
                                 Shared/ (BookRow, CoverImage, StatusBadge, FlowLayout + RouteChip, RouteDestination,
                                          TagChip + TagColor.color, StatusSwipeActions, ReplaceRouteAction)
@@ -369,7 +418,7 @@ ios/
     Graph/                    GraphStore (one Relate Database), Schema (a Relate Migrator); UI-free, testable
       Queries/                LibraryQueries, BookQueries, AuthorQueries, TermQueries,
                               StatusQueries, TagQueries, NoteQueries, EmbeddingQueries, SearchQueries, PlaceQueries,
-                              ImportQueries
+                              ImportQueries, ConnectionQueries (two-hop links), NextUpQueries
                               (Cypher + GraphStore extensions)
       Models/                 BookSummary, BookDetail (+ AuthorRef, EditionItem, SeriesMembership, AwardWin),
                               AuthorDetail, AuthorSummary, TermKind, TermSummary, LibraryFilter, LibrarySort, ReadingStatus,

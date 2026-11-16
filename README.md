@@ -58,7 +58,7 @@ cd ios
 scripts/setup_relate.sh                   # once: Relate at the pinned commit, engine built locally (needs rustup)
 export RELATE_LOCAL_XCFRAMEWORK=1         # for every swift and xcodebuild command
 xcodegen generate
-swift test                                # 270 core tests on the Mac
+swift test                                # 293 core tests on the Mac
 xcodebuild -project RelateBooks.xcodeproj -scheme RelateBooks \
   -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/rb-dd build
 ```
@@ -180,7 +180,10 @@ AGENTS.md                 conventions for coding agents (CLAUDE.md imports it)
   credentials).
 - **App** phases 0 to 5 of the plan are implemented and verified on the
   iPhone 17 simulator: scaffold, browse, reading status/tags/notes, semantic
-  search, map, add books. 270 core tests, 12 UI tests. Since 2026-11-15 it is
+  search, map, add books, plus four graph features (search that follows
+  series, authors and shared subjects from its top hits; reasons that link a
+  book to what you have read; Next Up; unread books set near places you have
+  read about). 293 core tests, 14 UI tests. Since 2026-11-15 it is
   built on Relate's unreleased Swift API (see Requirements). Phase 6 (offline covers,
   importing a newer export, export, share) is next.
 - **Web app** implemented and verified in Chrome on the sample and on a

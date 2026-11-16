@@ -8,6 +8,10 @@ struct MapScreen: View {
     let session: AppSession
     @State private var draft = ""
     @FocusState private var searchFocused: Bool
+    @State private var showsNearReading = false
+    /// The place chosen in the "Near your reading" sheet; the map flies
+    /// there once that sheet is gone (two sheets cannot overlap).
+    @State private var pendingPlace: String?
 
     var body: some View {
         ZStack {
@@ -22,6 +26,17 @@ struct MapScreen: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
         .sheet(item: sheetBinding) { sheet in
             PlaceSheet(model: sheet, session: session) { model.deselect() }
+        }
+        .sheet(isPresented: $showsNearReading, onDismiss: {
+            guard let place = pendingPlace else { return }
+            pendingPlace = nil
+            Task { await model.focus(on: place) }
+        }) {
+            NearReadingSheet(model: session.nearReading) { place in
+                pendingPlace = place.label
+                showsNearReading = false
+            }
+            .presentationDetents([.medium, .large])
         }
         .onChange(of: model.searchText) { _, text in
             // choose(_:) clears the search.
@@ -168,6 +183,19 @@ struct MapScreen: View {
             .background(.regularMaterial, in: Capsule())
 
             Spacer(minLength: 8)
+
+            Button {
+                searchFocused = false
+                showsNearReading = true
+            } label: {
+                Image(systemName: "book")
+                    .font(.footnote.weight(.medium))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+            }
+            .background(.regularMaterial, in: Capsule())
+            .accessibilityLabel("Near your reading")
+            .accessibilityIdentifier("map.nearReading")
 
             Toggle(isOn: $model.showsBirthplaces) {
                 Label("Birthplaces", systemImage: "person.2")

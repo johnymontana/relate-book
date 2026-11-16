@@ -4,6 +4,8 @@ import SwiftUI
 /// (`BookDetailModel.loadSimilar`), as a horizontal strip of covers.
 struct MoreLikeThisSection: View {
     let similar: LoadState<[BookSummary]>
+    /// What each book shares with the one on screen, by key.
+    var links: [String: BookConnection] = [:]
     /// nil when there is no indexer (keyword-only builds and previews).
     let indexingComplete: Bool?
 
@@ -14,7 +16,7 @@ struct MoreLikeThisSection: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .top, spacing: 12) {
                         ForEach(Array(books.enumerated()), id: \.element.key) { i, book in
-                            SimilarBookCard(book: book)
+                            SimilarBookCard(book: book, link: links[book.key])
                                 .accessibilityIdentifier("moreLikeThis.item.\(i)")
                         }
                     }
@@ -46,6 +48,7 @@ struct MoreLikeThisSection: View {
 /// One cover card; taps push the book on the current stack.
 private struct SimilarBookCard: View {
     let book: BookSummary
+    let link: BookConnection?
     @Environment(\.openRoute) private var openRoute
 
     var body: some View {
@@ -65,6 +68,14 @@ private struct SimilarBookCard: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .frame(width: 84, alignment: .leading)
+                if let link {
+                    Text(link.shortPhrase)
+                        .font(.caption2)
+                        .foregroundStyle(.tint)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .frame(width: 84, alignment: .leading)
+                }
             }
             .frame(width: 84, alignment: .topLeading)
         }

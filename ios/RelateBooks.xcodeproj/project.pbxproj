@@ -14,6 +14,7 @@
 		104644E3E6DC5943EA40E327 /* StatusQueries.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9556C3D1BBD8AB30CF78F3C5 /* StatusQueries.swift */; };
 		182EAC73A5B3675C79D5A09E /* TagsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64AC4D2C05842B756A6F04BB /* TagsView.swift */; };
 		193661912FEF2684B2CDA023 /* SearchResultRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D86047E3E5B296938101587C /* SearchResultRow.swift */; };
+		1A0492137796DDAC20FDD6FD /* NextUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EFC9B79C9C9A205292FAC32 /* NextUpView.swift */; };
 		1C06017C5314DCD526144942 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E60B1797DAAC8F193C2DFE0 /* LibraryView.swift */; };
 		1DB5B4A4F40D2560B16A4587 /* PlaceMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3BF36AFBE76B7D100AD4A4 /* PlaceMapView.swift */; };
 		1DEDF862732DD4A13740B607 /* MapUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01680B023678947E002F765 /* MapUITests.swift */; };
@@ -36,6 +37,8 @@
 		3C6C7A006CBBF5E0EBF8FA58 /* AddBookUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48269AF565D30153B6653E89 /* AddBookUITests.swift */; };
 		3FE3CCD76811230149AA69A4 /* AuthorDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 102341541B6B09B4BD117FFB /* AuthorDetail.swift */; };
 		42365988B334CEFEE6EEF3D8 /* ChipNavigationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2955EF972B67D5880A792D0 /* ChipNavigationUITests.swift */; };
+		447094A6EC9877CCFACB032B /* NextUpQueries.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3C3B3E17F2EC3DE7DFA678B /* NextUpQueries.swift */; };
+		473A0EA0ABE15FF2882C7B7F /* GraphFeaturesUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 103A919FCB7BC600CAB636A0 /* GraphFeaturesUITests.swift */; };
 		4968093CF21C36EAACFFF042 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17818DE2FB43934B7ECA69CE /* StatusBadge.swift */; };
 		49D2AA27DEDE5ECD5B63C61D /* LibraryFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D961A3E2306B5CB33731B8A /* LibraryFilter.swift */; };
 		4B627CEF1180AC75A33AB5CB /* SearchUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E76C59071C990C6A20799667 /* SearchUITests.swift */; };
@@ -53,10 +56,13 @@
 		5BFFF02DE86DAB56AB836053 /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5302DB510A71D27B8CBBB9F0 /* Log.swift */; };
 		5CA3C9D21458D2C5CA304BCA /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AD28AA7E9B28D15D0542BFC /* SearchView.swift */; };
 		61A3CB600D893EADE69719AA /* NotesSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6482F2FDC1152E2335601C6D /* NotesSection.swift */; };
+		6460C3EE4DAE70FCCC208936 /* NextUpModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF4D43FACD512CF67F63BCAF /* NextUpModel.swift */; };
 		692E1BD1235F6F246E06A1AE /* books.rl in Resources */ = {isa = PBXBuildFile; fileRef = 20F1056F0C34D46AE9CB00B6 /* books.rl */; };
 		6AF946462D017C0420581F77 /* BookImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D7658AB3505520805AC5AC5 /* BookImporter.swift */; };
 		6E71A6AB987A229AF1B08815 /* SearchModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89F84FF86D60A13B4C555FBF /* SearchModels.swift */; };
+		72823A9638D701B66F51996D /* ConnectionQueries.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF94DB693A042B4055CF060 /* ConnectionQueries.swift */; };
 		752AFD2789891CDEF904CCDF /* OpenLibraryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E6643131CE34D161EE2A23 /* OpenLibraryModels.swift */; };
+		79D0969FA4E0F1A427E70C57 /* NextUp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6901A76A4C2CA4574D490D40 /* NextUp.swift */; };
 		7C6C0EE6D3D9B75E3E7FE646 /* MapModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD71E667217DB45382AE0498 /* MapModel.swift */; };
 		819F936C0B074DF069E4920F /* ImportQueries.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B44C91F451D83C509EDDE2 /* ImportQueries.swift */; };
 		887867C78955966A618DD772 /* GraphError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75066E6F69F5F099A0935742 /* GraphError.swift */; };
@@ -75,6 +81,7 @@
 		B316A8ACBEF14E0746650EE9 /* ShowOnMapAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95C94522D75BC7BBC5370BC0 /* ShowOnMapAction.swift */; };
 		B39EB9C85183687093C4CD51 /* RatingControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D701BBCB7D5D5D5A931A30B /* RatingControl.swift */; };
 		B59756EF516CDA03CCF64F1C /* TermKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA2FBD27E56B7E9A5AAA5CBC /* TermKind.swift */; };
+		BA0C2307F485ED6AC186F62B /* NearReadingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 488453723D6871BCEF36499D /* NearReadingSheet.swift */; };
 		BD2DDBD404713819198E86D0 /* AddBookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBC7BF7A0AF75F748836044B /* AddBookView.swift */; };
 		BD899469D856B2236AB7D0F0 /* TextEmbedder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC6D9364FD814B0F46055A8 /* TextEmbedder.swift */; };
 		BE625187396E3FFBAF8B3C15 /* KeywordQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF06B760A81F7F8562CFBA43 /* KeywordQuery.swift */; };
@@ -95,6 +102,7 @@
 		E20FAE77EE90856A813282A3 /* RankFusion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 228D6F4404122B252033654F /* RankFusion.swift */; };
 		E6333B0176B39A5F910C5922 /* StatusControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DEB07D78391C4A6BF3A3695 /* StatusControl.swift */; };
 		E722665E7DE8CB847AA17DF1 /* TagQueries.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FCE1FA25F8E08F23A309DF9 /* TagQueries.swift */; };
+		E875820B60A280467C36F08A /* BookConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0380B03444756AB0BD3B18A9 /* BookConnection.swift */; };
 		E93411AC6DE4F4BEEBED2E74 /* StubOpenLibraryTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C96A0E175D5640FF9CEF3593 /* StubOpenLibraryTransport.swift */; };
 		E99492A2643F734A4FDCF9E0 /* UserDataController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20BF0D307241751E12845028 /* UserDataController.swift */; };
 		EAB4150EE085D40023023716 /* LibraryQueries.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A8081D95F2279D11EE95B58 /* LibraryQueries.swift */; };
@@ -123,14 +131,18 @@
 
 /* Begin PBXFileReference section */
 		00860370818F7BDC2B2BD977 /* BookDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetail.swift; sourceTree = "<group>"; };
+		0380B03444756AB0BD3B18A9 /* BookConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookConnection.swift; sourceTree = "<group>"; };
 		07EDB458388DB948BDB29535 /* TagBooksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagBooksView.swift; sourceTree = "<group>"; };
 		0910CD1275E450AE0D98E578 /* StatusSwipeActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusSwipeActions.swift; sourceTree = "<group>"; };
 		0E60B1797DAAC8F193C2DFE0 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		102341541B6B09B4BD117FFB /* AuthorDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorDetail.swift; sourceTree = "<group>"; };
+		103A919FCB7BC600CAB636A0 /* GraphFeaturesUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphFeaturesUITests.swift; sourceTree = "<group>"; };
 		17818DE2FB43934B7ECA69CE /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
 		1A8081D95F2279D11EE95B58 /* LibraryQueries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryQueries.swift; sourceTree = "<group>"; };
+		1AF94DB693A042B4055CF060 /* ConnectionQueries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionQueries.swift; sourceTree = "<group>"; };
 		1B25674DFB2ADC581B14A981 /* UserDataUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDataUITests.swift; sourceTree = "<group>"; };
 		1C8252E1C25E8219FE8D9077 /* SearchQueries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchQueries.swift; sourceTree = "<group>"; };
+		1EFC9B79C9C9A205292FAC32 /* NextUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextUpView.swift; sourceTree = "<group>"; };
 		20BF0D307241751E12845028 /* UserDataController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDataController.swift; sourceTree = "<group>"; };
 		20F1056F0C34D46AE9CB00B6 /* books.rl */ = {isa = PBXFileReference; path = books.rl; sourceTree = "<group>"; };
 		228D6F4404122B252033654F /* RankFusion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankFusion.swift; sourceTree = "<group>"; };
@@ -147,6 +159,7 @@
 		4613848DA0B783350F0B2540 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		4665510E84F888F8ED7AE713 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		48269AF565D30153B6653E89 /* AddBookUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookUITests.swift; sourceTree = "<group>"; };
+		488453723D6871BCEF36499D /* NearReadingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NearReadingSheet.swift; sourceTree = "<group>"; };
 		4A715FEFFFFABEDF58734C3C /* PlaceGeocoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceGeocoder.swift; sourceTree = "<group>"; };
 		4AD28AA7E9B28D15D0542BFC /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		4B63B4E92B84DD48262A8762 /* NoteQueries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteQueries.swift; sourceTree = "<group>"; };
@@ -173,6 +186,7 @@
 		652537F84122E17457F0C120 /* HeadingNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadingNormalizer.swift; sourceTree = "<group>"; };
 		676F2BAE7F708B92EE6BF906 /* ImportDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportDraft.swift; sourceTree = "<group>"; };
 		677050263243D7EFEAC28770 /* WordPieceTokenizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordPieceTokenizer.swift; sourceTree = "<group>"; };
+		6901A76A4C2CA4574D490D40 /* NextUp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextUp.swift; sourceTree = "<group>"; };
 		6A51B6C87756E182F9BFA293 /* EmbeddingResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddingResources.swift; sourceTree = "<group>"; };
 		724115C7FB2146FFDE00E3E1 /* EmbeddingIndexer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddingIndexer.swift; sourceTree = "<group>"; };
 		75066E6F69F5F099A0935742 /* GraphError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphError.swift; sourceTree = "<group>"; };
@@ -205,6 +219,7 @@
 		B2668ACD2F9AB8569857B137 /* AuthorQueries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorQueries.swift; sourceTree = "<group>"; };
 		B717457ED0A11423C533C83C /* EmbeddingSpace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddingSpace.swift; sourceTree = "<group>"; };
 		C2955EF972B67D5880A792D0 /* ChipNavigationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChipNavigationUITests.swift; sourceTree = "<group>"; };
+		C3C3B3E17F2EC3DE7DFA678B /* NextUpQueries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextUpQueries.swift; sourceTree = "<group>"; };
 		C532A92CC255926164E9467F /* StubPlaceGeocoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubPlaceGeocoder.swift; sourceTree = "<group>"; };
 		C696245EB3A828A9D5D7FFCA /* SearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchService.swift; sourceTree = "<group>"; };
 		C96A0E175D5640FF9CEF3593 /* StubOpenLibraryTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubOpenLibraryTransport.swift; sourceTree = "<group>"; };
@@ -216,6 +231,7 @@
 		D86047E3E5B296938101587C /* SearchResultRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultRow.swift; sourceTree = "<group>"; };
 		D8EBC004EE5F0901040C2958 /* StubOpenLibraryFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubOpenLibraryFixtures.swift; sourceTree = "<group>"; };
 		DBC7BF7A0AF75F748836044B /* AddBookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddBookView.swift; sourceTree = "<group>"; };
+		DF4D43FACD512CF67F63BCAF /* NextUpModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextUpModel.swift; sourceTree = "<group>"; };
 		E1642F974295A22A9959463B /* PagedBooks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PagedBooks.swift; sourceTree = "<group>"; };
 		E201AE75DCE0CA93784EBE48 /* TagChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagChip.swift; sourceTree = "<group>"; };
 		E76C59071C990C6A20799667 /* SearchUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchUITests.swift; sourceTree = "<group>"; };
@@ -272,9 +288,11 @@
 			children = (
 				B2668ACD2F9AB8569857B137 /* AuthorQueries.swift */,
 				89BE97619CC09F7571382D63 /* BookQueries.swift */,
+				1AF94DB693A042B4055CF060 /* ConnectionQueries.swift */,
 				CA28CF665DEA5169DBEEE0AA /* EmbeddingQueries.swift */,
 				31B44C91F451D83C509EDDE2 /* ImportQueries.swift */,
 				1A8081D95F2279D11EE95B58 /* LibraryQueries.swift */,
+				C3C3B3E17F2EC3DE7DFA678B /* NextUpQueries.swift */,
 				4B63B4E92B84DD48262A8762 /* NoteQueries.swift */,
 				98C1CDD20A52B20A5D7789DD /* PlaceQueries.swift */,
 				1C8252E1C25E8219FE8D9077 /* SearchQueries.swift */,
@@ -319,6 +337,7 @@
 			children = (
 				48269AF565D30153B6653E89 /* AddBookUITests.swift */,
 				C2955EF972B67D5880A792D0 /* ChipNavigationUITests.swift */,
+				103A919FCB7BC600CAB636A0 /* GraphFeaturesUITests.swift */,
 				A01680B023678947E002F765 /* MapUITests.swift */,
 				9B96E885DC53150F6683EEB2 /* Screenshots.swift */,
 				E76C59071C990C6A20799667 /* SearchUITests.swift */,
@@ -387,6 +406,7 @@
 				59825A11DF58C5ED570A2D86 /* LibraryModel.swift */,
 				5BF08A94E7C95EB76CF69F00 /* LoadState.swift */,
 				FD71E667217DB45382AE0498 /* MapModel.swift */,
+				DF4D43FACD512CF67F63BCAF /* NextUpModel.swift */,
 				E1642F974295A22A9959463B /* PagedBooks.swift */,
 				42D1B7AF2A24E15765500899 /* SearchModel.swift */,
 				A1BECFEA40C82774CEEB463F /* TagsModel.swift */,
@@ -410,6 +430,14 @@
 				A88F61FD02AC531DE8C8872B /* ViewModels */,
 			);
 			path = RelateBooks;
+			sourceTree = "<group>";
+		};
+		AE8F2EE7A11EF3E54FD80F12 /* NextUp */ = {
+			isa = PBXGroup;
+			children = (
+				1EFC9B79C9C9A205292FAC32 /* NextUpView.swift */,
+			);
+			path = NextUp;
 			sourceTree = "<group>";
 		};
 		B4523BE543159193735FD849 /* AddBook */ = {
@@ -459,9 +487,11 @@
 			isa = PBXGroup;
 			children = (
 				102341541B6B09B4BD117FFB /* AuthorDetail.swift */,
+				0380B03444756AB0BD3B18A9 /* BookConnection.swift */,
 				00860370818F7BDC2B2BD977 /* BookDetail.swift */,
 				43C3EFCC81D13F450C943022 /* BookSummary.swift */,
 				7D961A3E2306B5CB33731B8A /* LibraryFilter.swift */,
+				6901A76A4C2CA4574D490D40 /* NextUp.swift */,
 				9FAE3A0C2EAC702FACF5E96C /* Place.swift */,
 				2A138103716230723CE707FF /* ReadingStatus.swift */,
 				CA2FBD27E56B7E9A5AAA5CBC /* TermKind.swift */,
@@ -502,6 +532,7 @@
 				FB21BE08246F6F797C1F34AF /* BookDetail */,
 				F14A0FA19E69D5BA2E0BBC8C /* Library */,
 				E8018500DE030BF38238302C /* Map */,
+				AE8F2EE7A11EF3E54FD80F12 /* NextUp */,
 				C16491CD9D0662E01A11E9C8 /* Search */,
 				BF4EF40D3015A41D362DFDFA /* Shared */,
 				CA8DAD38AE2A4C498B0BA00B /* Tags */,
@@ -514,6 +545,7 @@
 			isa = PBXGroup;
 			children = (
 				2D5A2703DE1C0BEEDF3D3FE0 /* MapScreen.swift */,
+				488453723D6871BCEF36499D /* NearReadingSheet.swift */,
 				9F222CBA8287A23BC712E8AD /* PinTier+Color.swift */,
 				5C3BF36AFBE76B7D100AD4A4 /* PlaceMapView.swift */,
 				F1FECA84DB381C923755CEAD /* PlaceSheet.swift */,
@@ -664,6 +696,7 @@
 				3FE3CCD76811230149AA69A4 /* AuthorDetail.swift in Sources */,
 				9E83C269F6B382529173D5DE /* AuthorQueries.swift in Sources */,
 				EE3D145E5A7D5DAFF40E5E9F /* AuthorView.swift in Sources */,
+				E875820B60A280467C36F08A /* BookConnection.swift in Sources */,
 				ED3A2090703C179A76BDDABE /* BookDetail.swift in Sources */,
 				E0AEB7141E189ACEFE839344 /* BookDetailView.swift in Sources */,
 				C5ECCFC78880EDC4F2013184 /* BookEmbeddingText.swift in Sources */,
@@ -672,6 +705,7 @@
 				34EEA236F68D0703D7B91214 /* BookRow.swift in Sources */,
 				D3B620B685F3A46A4BC42968 /* BookSummary.swift in Sources */,
 				541E94CEE58C0A9969BE93A4 /* CLPlaceGeocoder.swift in Sources */,
+				72823A9638D701B66F51996D /* ConnectionQueries.swift in Sources */,
 				2051E6389872D53255221B38 /* ContentView.swift in Sources */,
 				C12131917A2288602700A9C8 /* CoverImage.swift in Sources */,
 				F51A1BCB61164EC0D247372A /* DetailModels.swift in Sources */,
@@ -701,6 +735,11 @@
 				94A1FE08681B83841F81915E /* MapScreen.swift in Sources */,
 				FAA014A3BA7B3C31B7DFB769 /* MiniLMEmbedder.swift in Sources */,
 				29F55BBFF9E6ED66A49E8484 /* MoreLikeThisSection.swift in Sources */,
+				BA0C2307F485ED6AC186F62B /* NearReadingSheet.swift in Sources */,
+				79D0969FA4E0F1A427E70C57 /* NextUp.swift in Sources */,
+				6460C3EE4DAE70FCCC208936 /* NextUpModel.swift in Sources */,
+				447094A6EC9877CCFACB032B /* NextUpQueries.swift in Sources */,
+				1A0492137796DDAC20FDD6FD /* NextUpView.swift in Sources */,
 				AA9EEB5F64A0F76A755CCF49 /* NoteQueries.swift in Sources */,
 				61A3CB600D893EADE69719AA /* NotesSection.swift in Sources */,
 				9D97D6CB569DE948BFC86AF1 /* OpenLibraryClient.swift in Sources */,
@@ -759,6 +798,7 @@
 			files = (
 				3C6C7A006CBBF5E0EBF8FA58 /* AddBookUITests.swift in Sources */,
 				42365988B334CEFEE6EEF3D8 /* ChipNavigationUITests.swift in Sources */,
+				473A0EA0ABE15FF2882C7B7F /* GraphFeaturesUITests.swift in Sources */,
 				1DEDF862732DD4A13740B607 /* MapUITests.swift in Sources */,
 				2458AD2E9DBD3586C47EB2F8 /* Screenshots.swift in Sources */,
 				4B627CEF1180AC75A33AB5CB /* SearchUITests.swift in Sources */,

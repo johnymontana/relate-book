@@ -18,6 +18,8 @@ struct RouteDestination: View {
             TagBooksView(model: TagBooksModel(name: name, store: session.store, controller: session.userData))
         case .addBook:
             AddBookView(model: session.addBookModel())
+        case .nextUp:
+            NextUpView(model: session.nextUp)
         case .addedBook(let key, let notice):
             BookDetailView(model: session.bookDetailModel(key: key), indexing: session.indexing, notice: notice)
         }

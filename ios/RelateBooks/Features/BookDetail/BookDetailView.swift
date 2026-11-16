@@ -118,7 +118,18 @@ struct BookDetailView: View {
                         .font(.footnote)
                 }
             }
-            MoreLikeThisSection(similar: model.similar, indexingComplete: indexing?.isComplete)
+            if !model.readingLinks.isEmpty {
+                Section("Connected to your reading") {
+                    ForEach(Array(model.readingLinks.enumerated()), id: \.element.id) { i, link in
+                        NavigationLink(value: Route.book(key: link.connection.otherKey)) {
+                            Label(link.phrase, systemImage: link.connection.kind.systemImage)
+                                .font(.subheadline)
+                        }
+                        .accessibilityIdentifier("connected.link.\(i)")
+                    }
+                }
+            }
+            MoreLikeThisSection(similar: model.similar, links: model.similarLinks, indexingComplete: indexing?.isComplete)
             facts(book)
             if !book.items.isEmpty {
                 Section(book.items.count == 1 ? "Edition on the wishlist" : "Editions on the wishlist (\(book.items.count))") {

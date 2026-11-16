@@ -2,7 +2,7 @@ import Foundation
 
 /// Hybrid search (plan §3.4, D9) and "More like this" (D11).
 ///
-/// Three candidate lists, fused with reciprocal rank fusion (k = 60):
+/// Four candidate lists, fused with reciprocal rank fusion (k = 60):
 /// 1. Semantic: the query embedded on device, top 50 on `book_embedding`.
 /// 2. Keyword: `book_text` top 50 plus `item_text` top 50 mapped to Books,
 ///    kept only when the book contains every sanitized term (title,
@@ -12,6 +12,15 @@ import Foundation
 ///    Mary out of the top 5 for "lonely astronaut saves earth".
 /// 3. Notes: top 20 on `note_embedding`, mapped to the owning Book, with
 ///    note cosine >= 0.30.
+/// 4. Related: the graph neighbours of the top hits of lists 1 to 3 (same
+///    series, author or award, a shared rare subject, place, person or
+///    era; `ConnectionQueries.related`). They rank from position 6 on, so
+///    the sequel of a top hit shows up under it even when its own
+///    description matches nothing, and never above it. A book that is also
+///    in another list is lifted and keeps that list's reason.
+///
+/// Each result also carries its strongest link to what the user has read
+/// (`SearchResult.because`), when there is one.
 ///
 /// Status and tag filters apply after fusion, in the hydrate query. Search
 /// works on whatever is embedded so far, so it is usable while indexing.
@@ -62,12 +71,35 @@ struct SearchService: Sendable {
             keyword = Self.keywordCandidates(query: keywordQuery, books: books, items: items)
         }
 
-        let hits = RankFusion.fuse(semantic: semantic, keyword: keyword, notes: notes, k: tuning.rrfK)
+        let direct = RankFusion.fuse(semantic: semantic, keyword: keyword, notes: notes, k: tuning.rrfK)
+        let seeds = Self.seeds(direct, tuning: tuning)
+        let related = try await store.relatedCandidates(seeds: seeds, limit: tuning.relatedLimit,
+                                                        maxDegree: tuning.maxConnectionDegree)
+            .filter { $0.weight >= tuning.minRelatedWeight }
+        let hits = related.isEmpty ? direct : RankFusion.fuse(
+            semantic: semantic, keyword: keyword, notes: notes,
+            related: related, relatedOffset: tuning.relatedRankOffset, k: tuning.rrfK)
         let summaries = try await store.hydrateSearch(keys: hits.map(\.key), filter: filter, limit: tuning.resultLimit)
+        let because = tuning.explainsResults
+            ? try await store.readingConnections(keys: summaries.map(\.key), maxDegree: tuning.maxConnectionDegree)
+            : [:]
         let byKey = Dictionary(summaries.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
-        let results = hits.compactMap { hit in byKey[hit.key].map { SearchResult(book: $0, hit: hit) } }
+        let results = hits.compactMap { hit in
+            byKey[hit.key].map { SearchResult(book: $0, hit: hit, because: because[hit.key]?.first) }
+        }
         return SearchResponse(query: text, results: results, semanticAvailable: semanticAvailable,
                               keywordTerms: keywordQuery?.terms ?? [])
+    }
+
+    /// The top hits worth expanding through the graph: a keyword or note
+    /// hit, or a vector hit at least `minSeedCosine` close.
+    static func seeds(_ hits: [SearchHit], tuning: SearchTuning) -> [String] {
+        hits.prefix(max(0, tuning.relatedSeeds))
+            .filter { hit in
+                hit.sources.contains(.keyword) || hit.sources.contains(.note)
+                    || (hit.semanticCosine ?? -1) >= tuning.minSeedCosine
+            }
+            .map(\.key)
     }
 
     /// Merges the two fulltext lists per book, applies the all-terms gate

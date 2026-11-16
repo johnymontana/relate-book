@@ -17,6 +17,17 @@ struct SearchResultRow: View {
             .font(.caption2)
             .foregroundStyle(.secondary)
             .padding(.leading, 60)
+            // The graph's reason: a link to something the user has read.
+            if let because = result.because {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Image(systemName: because.connection.kind.systemImage)
+                    Text(because.phrase)
+                        .lineLimit(2)
+                }
+                .font(.caption2)
+                .foregroundStyle(.tint)
+                .padding(.leading, 60)
+            }
         }
         .accessibilityElement(children: .combine)
     }

@@ -23,6 +23,12 @@ final class BookDetailModel {
     /// "More like this" (phase 3): the nearest books by stored embedding.
     /// Loaded with an empty list while the book is not embedded yet.
     private(set) var similar: LoadState<[BookSummary]> = .idle
+    /// What each "More like this" book shares with this one in the graph,
+    /// by key; a book that shares nothing is absent.
+    private(set) var similarLinks: [String: BookConnection] = [:]
+    /// This book's strongest links to what the user has read, is reading or
+    /// rated highly (up to 3).
+    private(set) var readingLinks: [ReadingConnection] = []
     private(set) var userData: BookUserData?
     /// Every tag, for the picker (name order is up to the view).
     private(set) var allTags: [TagSummary] = []
@@ -49,10 +55,23 @@ final class BookDetailModel {
         if !force, case .loaded = similar { return }
         if similar.value == nil { similar = .loading }
         do {
-            similar = .loaded(try await search.moreLikeThis(key: key))
+            let books = try await search.moreLikeThis(key: key)
+            similar = .loaded(books)
+            // The vectors say these are close; the graph says what they share.
+            similarLinks = (try? await store.connections(to: key, from: books.map(\.key))) ?? [:]
         } catch {
             Log.ui.error("more like this failed: \(error.localizedDescription, privacy: .public)")
             similar = .failed(error.localizedDescription)
+        }
+    }
+
+    /// Reads this book's links to the user's reading. Called on load and
+    /// when another book's status or rating changes.
+    func loadReadingLinks() async {
+        do {
+            readingLinks = try await store.readingConnections(keys: [key], perBook: 3)[key] ?? []
+        } catch {
+            Log.ui.error("reading links failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -68,6 +87,7 @@ final class BookDetailModel {
             state = .failed(error.localizedDescription)
             return
         }
+        await loadReadingLinks()
         if controller != nil { await loadAllTags() }
     }
 
@@ -202,6 +222,14 @@ final class BookDetailModel {
     /// reconciled by `perform` instead.
     private func handle(_ change: UserDataChange) {
         patchSimilar(change)
+        switch change {
+        case .status(let k, _) where k != key, .rating(let k, _) where k != key:
+            Task { await loadReadingLinks() }
+        case .reset:
+            Task { await loadReadingLinks() }
+        default:
+            break
+        }
         guard inFlight == 0, userData != nil else { return }
         switch change {
         case .status(let k, _), .rating(let k, _), .bookTags(let k), .notes(let k):

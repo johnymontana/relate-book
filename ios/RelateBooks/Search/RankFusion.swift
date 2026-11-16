@@ -1,4 +1,5 @@
-/// Reciprocal rank fusion over the three candidate lists (D9), pure.
+/// Reciprocal rank fusion over the candidate lists (D9), pure: semantic,
+/// keyword, notes, and the graph neighbours of the top hits.
 enum RankFusion {
     struct SemanticCandidate: Sendable, Equatable {
         let key: String
@@ -31,12 +32,17 @@ enum RankFusion {
     /// - fused = Σ 1 / (k + rank) over the lists containing the key.
     /// - Order: fused desc, then the smallest rank, then a title/author
     ///   keyword match first, then semantic cosine desc (none last), then key.
-    /// - Reason: note if a note matched, else both, semantic or keyword.
+    /// - Reason: note if a note matched, else both, semantic or keyword;
+    ///   related only when the graph is the sole source.
+    /// - `related` ranks start after `relatedOffset`: its n-th entry adds
+    ///   `1 / (k + relatedOffset + n)`. A book also in another list is
+    ///   lifted by it and keeps that list's reason.
     static func fuse(semantic: [SemanticCandidate], keyword: [KeywordCandidate], notes: [NoteCandidate],
-                     k: Double = 60) -> [SearchHit] {
+                     related: [RelatedCandidate] = [], relatedOffset: Int = 0, k: Double = 60) -> [SearchHit] {
         struct Entry {
-            var semanticRank: Int?, keywordRank: Int?, noteRank: Int?
+            var semanticRank: Int?, keywordRank: Int?, noteRank: Int?, relatedRank: Int?
             var semantic: SemanticCandidate?, keyword: KeywordCandidate?, note: NoteCandidate?
+            var related: RelatedCandidate?
         }
         var entries: [String: Entry] = [:]
         var order: [String] = []
@@ -65,6 +71,12 @@ enum RankFusion {
             let r = rank
             entry(c.key) { $0.noteRank = r; $0.note = c }
         }
+        rank = max(0, relatedOffset)
+        for c in related where entries[c.key]?.relatedRank == nil {
+            rank += 1
+            let r = rank
+            entry(c.key) { $0.relatedRank = r; $0.related = c }
+        }
 
         let hits: [SearchHit] = order.map { key in
             let e = entries[key]!
@@ -73,13 +85,16 @@ enum RankFusion {
             if let r = e.semanticRank { sources.insert(.semantic); fused += 1 / (k + Double(r)) }
             if let r = e.keywordRank { sources.insert(.keyword); fused += 1 / (k + Double(r)) }
             if let r = e.noteRank { sources.insert(.note); fused += 1 / (k + Double(r)) }
+            if let r = e.relatedRank { sources.insert(.related); fused += 1 / (k + Double(r)) }
             let reason: MatchReason =
                 if sources.contains(.note) { .note }
                 else if sources.contains([.semantic, .keyword]) { .both }
                 else if sources.contains(.semantic) { .semantic }
-                else { .keyword }
+                else if sources.contains(.keyword) { .keyword }
+                else { .related }
             return SearchHit(key: key, reason: reason, sources: sources,
                              semanticRank: e.semanticRank, keywordRank: e.keywordRank, noteRank: e.noteRank,
+                             relatedRank: e.relatedRank, relation: e.related?.connection,
                              semanticCosine: e.semantic?.cosine, keywordScore: e.keyword?.score,
                              titleMatch: e.keyword?.titleMatch ?? false,
                              noteCosine: e.note?.cosine, noteID: e.note?.noteID, noteSnippet: e.note?.snippet,
@@ -105,6 +120,6 @@ enum RankFusion {
     }
 
     private static func bestRank(_ hit: SearchHit) -> Int {
-        [hit.semanticRank, hit.keywordRank, hit.noteRank].compactMap { $0 }.min() ?? Int.max
+        [hit.semanticRank, hit.keywordRank, hit.noteRank, hit.relatedRank].compactMap { $0 }.min() ?? Int.max
     }
 }

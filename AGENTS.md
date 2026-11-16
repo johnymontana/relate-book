@@ -79,11 +79,11 @@ cd ios
 scripts/setup_relate.sh      # once, and after the pinned commit changes: fetches Relate, builds the engine framework
 export RELATE_LOCAL_XCFRAMEWORK=1   # for every swift and xcodebuild command below
 xcodegen generate            # after adding or removing files; commit project.yml AND the .xcodeproj
-swift test                   # core tests, macOS; expect "Test run with 270 tests in 35 suites passed"
+swift test                   # core tests, macOS; expect "Test run with 293 tests in 40 suites passed"
 xcodebuild -project RelateBooks.xcodeproj -scheme RelateBooks \
   -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/rb-dd build
 xcodebuild test -project RelateBooks.xcodeproj -scheme RelateBooks \
-  -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:RelateBooksUITests   # ~7 min, 12 tests
+  -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:RelateBooksUITests   # ~8 min, 14 tests
 ```
 
 ```sh
@@ -177,6 +177,15 @@ with `\(identifier:)`, or pass a parameter dictionary, which makes the text a
 plain string. A vector is bound with `CypherValue(vector:)` (a bare `[Float]`
 is a list), a coordinate with `GeoCoordinate.point()`.
 
+**Graph queries (connections, Next up).** A two-hop read through a shared
+node must not expand hubs: count a node's degree once per node (collect its
+uses, count, `UNWIND`), skip nodes above the degree cap and noise subjects, and
+add the statement to `PerfTests.graphStatements`. The scaled perf store, where
+every subject is on hundreds of books, is what catches a per-row degree count
+or an `EXISTS` over an award's winners; the six-book sample is what catches
+"rare" meaning nothing on a small library. Check both, and a copy of a full
+list if you have one, before changing `ConnectionQueries` weights or caps.
+
 **Timestamps.** Statements bind a `Foundation.Date` for an instant (stored as a
 UTC DATETIME) and `CypherValue.Date(date, in: timeZone)` for the user's
 calendar day (a DATE). Never call argument-less `date()` or
@@ -228,7 +237,10 @@ and `playwright-report/` are ignored; commit `package-lock.json`.
 
 Phases 0 to 5 of the iOS plan are implemented (browse, reading status/tags/notes,
 on-device semantic search, map, adding books). Phase 6 (offline covers,
-importing a newer `.rl`, export, share) is pending. Since 2026-11-15 the iOS
+importing a newer `.rl`, export, share) is pending. On top of the phases the
+app has four graph features (graph-expanded search, reasons that link a book
+to the user's reading, Next Up, near-your-reading on the map; see "Graph
+features" in `ios/README.md`). Since 2026-11-15 the iOS
 app is written against Relate's unreleased Swift API and built from a pinned
 source snapshot; moving back to a published package is a small change once a
 release carries it. The web app (overview

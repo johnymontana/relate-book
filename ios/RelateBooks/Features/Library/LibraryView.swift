@@ -34,6 +34,12 @@ struct LibraryView: View {
         .textInputAutocapitalization(.never)
         .onChange(of: searchText) { _, text in model.setSearchText(text) }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { openRoute(.nextUp) } label: {
+                    Label("Next Up", systemImage: "sparkles")
+                }
+                .accessibilityIdentifier("library.nextUp")
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Picker("Sort by", selection: Binding(

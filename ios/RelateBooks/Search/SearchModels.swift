@@ -16,6 +16,8 @@ struct SearchFilter: Sendable, Hashable {
 /// Why a result matched (the row's reason label).
 enum MatchReason: String, Sendable, Hashable, CaseIterable {
     case semantic, keyword, note, both
+    /// Found only through the graph: a neighbour of a top hit.
+    case related
 
     var label: String {
         switch self {
@@ -23,6 +25,7 @@ enum MatchReason: String, Sendable, Hashable, CaseIterable {
         case .keyword: "Keyword"
         case .note: "Your note"
         case .both: "Semantic + keyword"
+        case .related: "Related"
         }
     }
 
@@ -32,6 +35,7 @@ enum MatchReason: String, Sendable, Hashable, CaseIterable {
         case .keyword: "textformat"
         case .note: "note.text"
         case .both: "sparkle.magnifyingglass"
+        case .related: "point.3.connected.trianglepath.dotted"
         }
     }
 }
@@ -42,6 +46,8 @@ struct MatchSources: OptionSet, Sendable, Hashable {
     static let semantic = MatchSources(rawValue: 1 << 0)
     static let keyword = MatchSources(rawValue: 1 << 1)
     static let note = MatchSources(rawValue: 1 << 2)
+    /// The graph neighbours of the top hits.
+    static let related = MatchSources(rawValue: 1 << 3)
 }
 
 /// One fused result before hydration: its lists, ranks and scores.
@@ -53,6 +59,10 @@ struct SearchHit: Sendable, Hashable {
     let semanticRank: Int?
     let keywordRank: Int?
     let noteRank: Int?
+    /// 1-based position among the graph neighbours of the top hits.
+    let relatedRank: Int?
+    /// The strongest link to a top hit (its other book is that hit).
+    let relation: BookConnection?
     /// Cosine similarity in [-1, 1] (the engine's SEARCH score is (1 + cos) / 2).
     let semanticCosine: Double?
     /// The fulltext score (summed term frequency).
@@ -78,6 +88,8 @@ struct SearchHit: Sendable, Hashable {
             return "Semantic \(Self.format(semanticCosine))"
         case .keyword:
             return titleMatch ? "Keyword (title or author)" : "Keyword"
+        case .related:
+            return relation?.phrase ?? MatchReason.related.label
         }
     }
 
@@ -97,6 +109,9 @@ struct SearchHit: Sendable, Hashable {
 struct SearchResult: Sendable, Hashable, Identifiable {
     let book: BookSummary
     let hit: SearchHit
+    /// The book's strongest link to something the user read, is reading or
+    /// rated highly; nil when there is none.
+    var because: ReadingConnection? = nil
     var id: String { book.key }
 }
 
@@ -115,7 +130,7 @@ struct SearchResponse: Sendable, Hashable {
     /// A copy with each row's book replaced by `transform` (status patches).
     func mapBooks(_ transform: (BookSummary) -> BookSummary) -> SearchResponse {
         SearchResponse(query: query,
-                       results: results.map { SearchResult(book: transform($0.book), hit: $0.hit) },
+                       results: results.map { SearchResult(book: transform($0.book), hit: $0.hit, because: $0.because) },
                        semanticAvailable: semanticAvailable, keywordTerms: keywordTerms)
     }
 }
@@ -131,4 +146,25 @@ struct SearchTuning: Sendable, Equatable {
     var resultLimit = 50
     /// Characters of note text kept on a hit.
     var noteSnippetLength = 160
+
+    // Graph expansion: the neighbours of the top hits as a fourth list.
+    /// How many of the top fused hits are expanded. 0 turns expansion off.
+    var relatedSeeds = 5
+    /// A hit found only by its vector is a seed when its cosine is at least
+    /// this; a keyword or note hit always is. Below it, the "top hit" of a
+    /// query nothing matches would drag its neighbours in.
+    var minSeedCosine = 0.35
+    /// At most this many neighbours join the fusion.
+    var relatedLimit = 10
+    /// The neighbours rank from this position on: the n-th counts as rank
+    /// `relatedRankOffset + n`, so a book found only through the graph
+    /// never outranks the hits it was reached from.
+    var relatedRankOffset = 5
+    /// Neighbours linked more weakly than this are dropped (a link weighs
+    /// `strength / degree / seed position`; see `ConnectionQueries`).
+    var minRelatedWeight = 0.05
+    /// Shared nodes on more books than this link nothing.
+    var maxConnectionDegree = ConnectionQueries.defaultMaxDegree
+    /// Attach each result's link to the user's reading (`SearchResult.because`).
+    var explainsResults = true
 }

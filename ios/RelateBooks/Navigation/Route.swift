@@ -11,6 +11,8 @@ enum Route: Hashable, Sendable {
     case addBook
     /// Book detail reached from the add flow, with its notice.
     case addedBook(key: String, notice: AddedBookNotice)
+    /// "Next up": series to continue, liked authors, unread award winners.
+    case nextUp
 }
 
 /// The note on Book detail after the add flow (phase 5).
@@ -37,6 +39,7 @@ enum AppTab: String, Sendable, Hashable, CaseIterable {
 /// - `--open-author <key>` pushes that Author page.
 /// - `--open-term <kind>=<name>` pushes a term page (kind: subject, genre,
 ///   series, place, person, era, publisher, award, country).
+/// - `--open-next-up` (flag) pushes the Next Up screen.
 /// - `--open-tab <library|tags|search|map>` selects the initial tab (an
 ///   unknown value is ignored and not consumed).
 /// - `--search <text>` prefills the Search tab and runs the query; selects
@@ -89,6 +92,8 @@ struct LaunchOptions: Equatable, Sendable {
                 if let value, !value.isEmpty { options.routes.append(.author(key: value)); index = next }
             case "--open-term":
                 if let value, let route = termRoute(value) { options.routes.append(route); index = next }
+            case "--open-next-up":
+                options.routes.append(.nextUp)
             case "--open-tab":
                 if let value, let tab = AppTab(rawValue: value.lowercased()) { options.initialTab = tab; index = next }
             case "--reset-user-data":
