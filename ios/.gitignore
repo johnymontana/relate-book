@@ -5,5 +5,3 @@
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
 DerivedData/
-# The pinned Relate source snapshot and its locally built XCFramework (scripts/setup_relate.sh)
-Vendor/

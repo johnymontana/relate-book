@@ -266,7 +266,7 @@ struct SearchServiceTests {
         for raw in ["\"quoted\"", "a:b", "(x)", "x*", "AND", "\\", "x\\", "\\x", "[x]", "{x}", "&&", "?"] {
             let rawQuery = KeywordQuery(terms: [raw])
             if raw.hasSuffix("\\") {
-                // Relate main (after 1.0.1): a trailing backslash escapes
+                // Relate 1.1.0 (not 1.0.1): a trailing backslash escapes
                 // nothing and is a syntax error. 1.0.1 accepted it.
                 await #expect(throws: RelateError.self) { _ = try await store.bookTextHits(rawQuery, limit: 50) }
                 await #expect(throws: RelateError.self) { _ = try await store.itemTextHits(rawQuery, limit: 50) }

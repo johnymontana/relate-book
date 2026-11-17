@@ -79,7 +79,7 @@ struct GraphStore: Sendable {
 
     /// Runs a statement that only reads but contains a `CALL { }` subquery.
     ///
-    /// The engine (checked at the pinned commit) reports any statement with a
+    /// The engine (checked on 1.1.0; LABS-1761) reports any statement with a
     /// CALL subquery as read-write, whatever the subquery does, and a managed
     /// read refuses a statement that is not a read. Until the engine tells the
     /// two apart, such a statement runs as a transaction on the writer: it
@@ -97,7 +97,7 @@ struct GraphStore: Sendable {
 
     /// Runs `statements` in one write transaction: all commit or none do.
     ///
-    /// Relate 1.0.1 and the pinned main (LABS-1188, still open): never
+    /// Relate 1.0.1 and 1.1.0 (LABS-1188, still open): never
     /// delete, inside one transaction, a node created earlier in that same
     /// transaction. The engine panics ("update counters are non-negative")
     /// and poisons the connection. Deleting nodes that existed before the

@@ -16,6 +16,12 @@ stack yet. The relate-book migration (§7) was done the same day against
 `main` at `af8c2e4`, through a path dependency on a source snapshot; see
 [§10](#10-the-relate-book-migration).
 
+Update 2026-11-17: Relate 1.1.0 is the first release that carries the stack
+(1.0.2, published the day before, was cut earlier and has only #335). Its Swift
+sources are identical to `af8c2e4`. relate-book's iOS app now depends on the
+published package at exactly 1.1.0; the source snapshot and its setup script
+are gone.
+
 This plans 18 Swift-only improvements to the `Relate` Swift package
 (`github.com/relatedb/relate`, sources in `clients/swift`, version 1.0.1). None
 needs an engine or C ABI change. The relate-book iOS app (`ios/`) and the Relate

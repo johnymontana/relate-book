@@ -179,7 +179,6 @@
 		5D7658AB3505520805AC5AC5 /* BookImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookImporter.swift; sourceTree = "<group>"; };
 		5E6EFE40CCE3C4030C756370 /* IndexingBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexingBanner.swift; sourceTree = "<group>"; };
 		60C402EEA27DE7AADB15FDB0 /* Row.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Row.swift; sourceTree = "<group>"; };
-		61B1E03EFA3545676DB4EAB5 /* relate */ = {isa = PBXFileReference; lastKnownFileType = folder; name = relate; path = Vendor/relate; sourceTree = SOURCE_ROOT; };
 		620B40CB31AB7674E0A1056B /* Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Schema.swift; sourceTree = "<group>"; };
 		6482F2FDC1152E2335601C6D /* NotesSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesSection.swift; sourceTree = "<group>"; };
 		64AC4D2C05842B756A6F04BB /* TagsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagsView.swift; sourceTree = "<group>"; };
@@ -276,7 +275,6 @@
 		2DFBE0A5B03404FFE1BE67E5 = {
 			isa = PBXGroup;
 			children = (
-				797D1C9E6C2DB53826482874 /* Packages */,
 				AB0F3B201782314226DBEE07 /* RelateBooks */,
 				79170916CAC2798063385199 /* UITests */,
 				11A4AB67D7F983FB7D8BBEAD /* Products */,
@@ -344,14 +342,6 @@
 				1B25674DFB2ADC581B14A981 /* UserDataUITests.swift */,
 			);
 			path = UITests;
-			sourceTree = "<group>";
-		};
-		797D1C9E6C2DB53826482874 /* Packages */ = {
-			isa = PBXGroup;
-			children = (
-				61B1E03EFA3545676DB4EAB5 /* relate */,
-			);
-			name = Packages;
 			sourceTree = "<group>";
 		};
 		7FDA1D86BD82952B2E0E8FFA /* Authors */ = {
@@ -659,7 +649,7 @@
 			mainGroup = 2DFBE0A5B03404FFE1BE67E5;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				635C1BE039165C86233602C2 /* XCLocalSwiftPackageReference "Vendor/relate" */,
+				94FB1947A6224A97EDBBEF7A /* XCRemoteSwiftPackageReference "relate" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 11A4AB67D7F983FB7D8BBEAD /* Products */;
@@ -1072,16 +1062,21 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		635C1BE039165C86233602C2 /* XCLocalSwiftPackageReference "Vendor/relate" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Vendor/relate;
+/* Begin XCRemoteSwiftPackageReference section */
+		94FB1947A6224A97EDBBEF7A /* XCRemoteSwiftPackageReference "relate" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/relatedb/relate";
+			requirement = {
+				kind = exactVersion;
+				version = 1.1.0;
+			};
 		};
-/* End XCLocalSwiftPackageReference section */
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		03586EE0C768CC35E2004EBC /* Relate */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = 94FB1947A6224A97EDBBEF7A /* XCRemoteSwiftPackageReference "relate" */;
 			productName = Relate;
 		};
 /* End XCSwiftPackageProductDependency section */

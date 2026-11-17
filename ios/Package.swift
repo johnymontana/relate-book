@@ -8,11 +8,8 @@ let package = Package(
         .library(name: "RelateBooksCore", targets: ["RelateBooksCore"]),
     ],
     dependencies: [
-        // Relate at the commit scripts/setup_relate.sh pins, as a source snapshot in Vendor/relate
-        // (git-ignored) with a locally built RelateFFI.xcframework: the Swift API this app uses
-        // (ADR-0596) is on Relate's main branch and in no release yet. Build with
-        // RELATE_LOCAL_XCFRAMEWORK=1. Go back to `.package(url:exact:)` once a release carries it.
-        .package(path: "Vendor/relate"),
+        // The published Relate release: SwiftPM downloads its RelateFFI.xcframework (checksum-pinned).
+        .package(url: "https://github.com/relatedb/relate", exact: "1.1.0"),
     ],
     targets: [
         // Everything under RelateBooks/ except the SwiftUI app, the UI-only Features/ views and the bundled store.
