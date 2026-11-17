@@ -109,11 +109,12 @@ and UI tests are written against the sample's six books.
 
 ## Requirements
 
-- **Relate.** The extension, the bundled store and the web app use Relate
-  1.0.1. The iOS package and project depend on the published Swift package
-  (`https://github.com/relatedb/relate`, exact version 1.1.0, the first
-  release with the Swift API the app uses); SwiftPM downloads its
-  checksum-pinned `RelateFFI.xcframework` (377 MB, once).
+- **Relate 1.1.0.** The iOS package and project depend on the published Swift
+  package (`https://github.com/relatedb/relate`, exact version 1.1.0, the
+  first release with the Swift API the app uses); SwiftPM downloads its
+  checksum-pinned `RelateFFI.xcframework` (377 MB, once). The web app pins
+  `@relate/relate-wasm` 1.1.0, and the extension runs under the 1.1.0 CLI.
+  The bundled sample store was imported on 1.0.1 and is unchanged.
   The `relate` CLI (for the extension and ad-hoc Cypher) comes from the
   installer above, the [release page](https://github.com/relatedb/relate/releases),
   or `cargo build --release -p relate-cli` in a Relate checkout.
@@ -168,9 +169,10 @@ AGENTS.md                 conventions for coding agents (CLAUDE.md imports it)
 
 ## Status
 
-- **Extension** 0.2.0. On relate 1.0.1 the sample list imports with
-  `--wikidata --geocode` in about 30 seconds (6 books, 8 authors, 173
-  subjects, 58 awards, 34 places, 19 on the map). On relate 0.16.1, a
+- **Extension** 0.2.0. On relate 1.1.0 the sample list imports with
+  `--wikidata --geocode` in 28 seconds (6 books, 8 authors, 173
+  subjects, 58 awards, 34 places, 19 on the map), the same graph as on 1.0.1.
+  On relate 0.16.1, a
   2,002-item amazon.com list imported in 52 minutes (1,811 books, 1,757
   resolved) and geocoded in 9 minutes (600 of 693 places located). Google
   Books and Hardcover are wired but have not been run end to end (no

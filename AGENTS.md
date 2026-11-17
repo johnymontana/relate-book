@@ -35,25 +35,27 @@ LICENSE, NOTICE         Apache-2.0; third-party material (model, sample data, sc
 
 ## External dependencies
 
-- **Relate** (embedded Cypher graph database). The extension, the bundled
-  store and the web app are on 1.0.1. The iOS app is on 1.1.0, the first
-  release with the Swift API it uses (ADR-0596): `ios/Package.swift` and
+- **Relate** (embedded Cypher graph database), 1.1.0 everywhere: the iOS app,
+  the web app, and the CLI the extension runs under. Only the bundled sample
+  store is older: it was imported on 1.0.1 and is unchanged (an import of the
+  same list on 1.1.0 gives the same graph). 1.1.0 is the first release with
+  the Swift API the iOS app uses (ADR-0596): `ios/Package.swift` and
   `ios/project.yml` depend on the published Swift package
   `https://github.com/relatedb/relate` at exactly 1.1.0, and SwiftPM downloads
   the checksum-pinned XCFramework (no environment variable; unset any stale
   `RELATE_LOCAL_XCFRAMEWORK`, which makes Relate's manifest look for a local
   build). Commit both `Package.resolved` files. Change the pin only as a
   deliberate upgrade: re-run every suite and re-check the engine notes below.
-- The **`relate` CLI** 1.0.1: `curl -sSfL https://relatedb.ai/install.sh | bash`,
+- The **`relate` CLI** 1.1.0: `curl -sSfL https://relatedb.ai/install.sh | bash`,
   a release binary, or `cargo build --release --locked -p relate-cli` in a
-  Relate checkout of tag `v1.0.1`. Check `relate --version` before trusting a
+  Relate checkout of tag `v1.1.0`. Check `relate --version` before trusting a
   binary you find lying around; never modify someone else's Relate checkout.
 - Full Xcode 27 (Swift Testing macros), `xcodegen` (`brew install xcodegen`),
   an iOS 26 simulator named "iPhone 17". `uv` only for regenerating the Core ML
   model.
 - For `web/`: Node 22+, and Google Chrome for the end-to-end tests (Playwright
   drives the installed browser; nothing is downloaded). The app pins
-  `@relate/relate-wasm` at exactly 1.0.1; change it only as a deliberate
+  `@relate/relate-wasm` at exactly 1.1.0; change it only as a deliberate
   upgrade and re-run both suites. The in-browser models are fetched by the
   browser at run time and are never part of the repository or a build.
 

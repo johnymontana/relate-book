@@ -3,7 +3,7 @@
 A book wishlist as a graph, explored entirely in the browser. The graph lives
 in [Relate](https://relatedb.ai) compiled to WebAssembly
 ([`@relate/relate-wasm`](https://www.npmjs.com/package/@relate/relate-wasm)
-1.0.1), the drawings are [NVL](https://neo4j.com/docs/nvl/current/), and two
+1.1.0), the drawings are [NVL](https://neo4j.com/docs/nvl/current/), and two
 models run in the tab: an embedding model (all-MiniLM-L6-v2, transformers.js)
 and a language model (WebLLM on WebGPU). There is no server: after the static
 files and the models are downloaded, nothing leaves the page.
@@ -171,9 +171,11 @@ A port of the iOS app's hybrid search, without notes:
    terms);
 3. the two lists are fused with reciprocal rank fusion (k = 60).
 
-User text never reaches a fulltext index raw: `KeywordQuery` lower-cases it
-and drops `and`/`or`/`not`, which Relate 1.0.1 reads as operators in upper
-case. Parameters cross into WASM as JSON, so a vector is a plain list wrapped
+User text never reaches a fulltext index raw: `KeywordQuery` keeps only
+lower-cased runs of letters and digits and drops `and`/`or`/`not`. In a raw
+query string Relate reads upper-case `AND`/`OR`/`NOT` as operators (since
+1.0.1) and, in 1.1.0, `*` as a wildcard and a trailing `~` as a fuzzy match,
+and it refuses a string that ends in a backslash. Parameters cross into WASM as JSON, so a vector is a plain list wrapped
 in `vector($q, 384, FLOAT32)` inside the statement.
 
 The text a book is embedded from is the iOS app's
@@ -239,7 +241,8 @@ runs whatever you type, writes included.
 
 ## Measurements
 
-On a MacBook Pro (Apple M4 Max), Chrome 157, 2026-11-14. "Full list" is a
+On a MacBook Pro (Apple M4 Max), Chrome 157, 2026-11-14, on Relate 1.0.1; the
+timings were not taken again on 1.1.0. "Full list" is a
 1,811-book export: 17,431 nodes, 30,365 relationships, 5.1 MB of JSON.
 
 | What | Sample (6 books) | Full list (1,811 books) |
@@ -256,7 +259,7 @@ Models, same machine, first use on a fast connection (download and start):
 embedding model 7 s; Qwen2.5 Coder 1.5B 21 s; 3B 35 s; 7B 2 min 20 s. From the
 browser cache each starts in a few seconds.
 
-Build output (`npm run build`): `relate_bg.wasm` 6.9 MB (2.5 MB gzipped), app
+Build output (`npm run build`, Relate 1.1.0): `relate_bg.wasm` 7.1 MB (2.6 MB gzipped; 6.9 MB and 2.5 MB on 1.0.1), app
 JavaScript 1.4 MB (0.4 MB gzipped); loaded only when used: WebLLM 6 MB,
 ONNX Runtime 27 MB.
 

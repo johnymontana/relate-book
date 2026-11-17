@@ -25,7 +25,7 @@
     "@neo4j-nvl/base": "^2.1.0",
     "@neo4j-nvl/interaction-handlers": "^2.1.0",
     "@neo4j-nvl/react": "^2.1.0",
-    "@relate/relate-wasm": "1.0.1",
+    "@relate/relate-wasm": "1.1.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

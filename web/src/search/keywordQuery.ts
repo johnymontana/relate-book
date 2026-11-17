@@ -1,9 +1,10 @@
 // The sanitized fulltext query. A port of ios/RelateBooks/Search/KeywordQuery.swift.
 //
 // Relate's fulltext indexes tokenize the query into lowercase letter/digit
-// runs, OR the terms and score by term frequency. Relate 1.0.1 reads
-// upper-case AND / OR / NOT as operators, so `$text` must never carry raw
-// user input: the terms here are lower-case and drop and/or/not.
+// runs, OR the terms and score by term frequency. In a raw string Relate reads
+// upper-case AND / OR / NOT as operators (since 1.0.1) and, in 1.1.0, `*` as a
+// wildcard and a trailing `~` as fuzzy, so `$text` must never carry raw user
+// input: the terms here are lower-case letters and digits and drop and/or/not.
 
 const STOPWORDS = new Set(
   (
